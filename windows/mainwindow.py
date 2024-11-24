@@ -26,7 +26,8 @@ class MainWindow(QWidget):
         self.setStyleSheet('background: rgba(207, 207, 207, 1);')
 
     def initUI(self):
-        button_style = '''
+        button_style = """
+    QPushButton {
             background: #7079f0;
             color: white;
             min-width: 150px;
@@ -35,19 +36,32 @@ class MainWindow(QWidget):
             border-radius: 0.5em;
             border: none;
             height: 2.5em;
-        '''
+    }
+
+    QPushButton:hover {
+            background: #5b65f5;
+    }
+
+    QPushButton:pressed {
+        background: #404df7;  
+    }
+    """
 
         # Create buttons
         self.b_scan_file = QPushButton('Scan File')
         self.b_scan_folder = QPushButton('Scan Folder')
         self.b_quarantine = QPushButton('Quarantine')
         self.b_exit = QPushButton('Exit')
+        self.b_delete = QPushButton("Delete File")
+        self.b_restore = QPushButton("Restore File")
 
         # Apply style to buttons
         self.b_scan_file.setStyleSheet(button_style)
         self.b_scan_folder.setStyleSheet(button_style)
         self.b_quarantine.setStyleSheet(button_style)
         self.b_exit.setStyleSheet(button_style)
+        self.b_delete.setStyleSheet(button_style)  # Assuming you have a delete button
+        self.b_restore.setStyleSheet(button_style)
 
         # Create vertical layout for buttons
         buttons_layout = QVBoxLayout()
@@ -74,8 +88,7 @@ class MainWindow(QWidget):
         layout.addWidget(self.quarantine_table)
 
         # Create quarantine buttons
-        self.b_delete = QPushButton("Delete File")
-        self.b_restore = QPushButton("Restore File")
+        
         self.b_delete.setStyleSheet(self.b_restore.styleSheet())
         self.b_restore.setStyleSheet(self.b_delete.styleSheet())
         self.b_delete.setVisible(False)
