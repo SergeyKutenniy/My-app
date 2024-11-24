@@ -1,1 +1,14 @@
-[]
+[
+    {
+        "file_name": "eicar.com",
+        "quarantine_path": "quarantine/eicar.com",
+        "date": "2024-11-24 20:21:07",
+        "status": "quarantined"
+    },
+    {
+        "file_name": "eicar.com",
+        "quarantine_path": "quarantine/eicar.com",
+        "date": "2024-11-24 20:22:09",
+        "status": "quarantined"
+    }
+]

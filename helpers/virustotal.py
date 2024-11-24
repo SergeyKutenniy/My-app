@@ -5,6 +5,7 @@ API_KEY = '53fc8fcb34397a326376729f594ce29fae66a137ba312f6bf4854ec385dcd67b'
 UPLOAD_URL = "https://www.virustotal.com/api/v3/files"
 FILE_INFO_URL = "https://www.virustotal.com/api/v3/files"
 
+
 def upload_file(path):
     try:
         # Загружаем файл с помощью POST
@@ -90,3 +91,5 @@ def parse_analysis_results(results):
         "undetected_count": len(engine_results["undetected"]),
         "engine_results": engine_results
     }
+
+
