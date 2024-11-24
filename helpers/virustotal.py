@@ -1,5 +1,5 @@
 import requests
-import time
+
 
 API_KEY = '53fc8fcb34397a326376729f594ce29fae66a137ba312f6bf4854ec385dcd67b'
 UPLOAD_URL = "https://www.virustotal.com/api/v3/files"
