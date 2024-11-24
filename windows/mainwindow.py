@@ -73,6 +73,7 @@ class MainWindow(QWidget):
         layout.addWidget(self.result_box)
         layout.addWidget(self.quarantine_table)
 
+        # Create quarantine buttons
         self.b_delete = QPushButton("Delete File")
         self.b_restore = QPushButton("Restore File")
         self.b_delete.setStyleSheet(self.b_restore.styleSheet())
@@ -168,6 +169,10 @@ class MainWindow(QWidget):
             self.quarantine_table.setItem(row, 1, QTableWidgetItem(file["quarantine_path"]))
             self.quarantine_table.setItem(row, 2, QTableWidgetItem(file["date"]))
 
+        # Show delete and restore buttons when quarantine files are displayed
+        self.b_delete.setVisible(True)
+        self.b_restore.setVisible(True)
+
     def remove_file_from_log(self, file_entry):
         if not os.path.exists(self.QUARANTINE_LOG):
             return
@@ -221,19 +226,17 @@ class MainWindow(QWidget):
         msg_box.setWindowTitle("Threat Detected")
         msg_box.setText(f"The file {file_path} is infected.")
         msg_box.setInformativeText("Select an action:")
-        msg_box.addButton("Delete", QMessageBox.AcceptRole)
-        msg_box.addButton("Move to Quarantine", QMessageBox.ActionRole)
+        msg_box.addButton("Quarantine", QMessageBox.AcceptRole)
+        msg_box.addButton("Delete", QMessageBox.DestructiveRole)
         msg_box.addButton("Skip", QMessageBox.RejectRole)
-        msg_box.exec_()
-        return {"Delete": "delete", "Move to Quarantine": "quarantine"}.get(msg_box.clickedButton().text(), "skip")
+        return msg_box.exec_()
 
     def handle_infected_file_action(self, action, file_path):
-        if action == "delete":
+        if action == QMessageBox.AcceptRole:
+            self.move_to_quarantine(file_path)
+        elif action == QMessageBox.DestructiveRole:
             os.remove(file_path)
             self.result_box.append(f"🗑 File deleted: {file_path}")
-        elif action == "quarantine":
-            self.move_to_quarantine(file_path)
-            self.result_box.append(f"🛑 File moved to quarantine: {file_path}")
         else:
             self.result_box.append(f"File skipped: {file_path}")
 
@@ -261,19 +264,46 @@ class MainWindow(QWidget):
 
     def delete_selected_file(self):
         selected_row = self.quarantine_table.currentRow()
-        if selected_row >= 0:
+        if selected_row >= 0:  # Check if a row is selected
             file_path = self.quarantine_table.item(selected_row, 1).text()
             if os.path.exists(file_path):
                 os.remove(file_path)
                 self.result_box.append(f"🗑 File deleted: {file_path}")
                 self.load_quarantine()
+            else:
+                self.show_file_not_found_message(file_path)
+        else:
+            self.show_no_file_selected_message()
 
     def restore_selected_file(self):
         selected_row = self.quarantine_table.currentRow()
-        if selected_row >= 0:
+        if selected_row >= 0:  # Check if a row is selected
             file_path = self.quarantine_table.item(selected_row, 1).text()
             quarantine_path = self.quarantine_table.item(selected_row, 0).text()
-            shutil.move(file_path, quarantine_path)
-            self.result_box.append(f"File restored from quarantine: {file_path}")
-            self.load_quarantine()
+            if os.path.exists(file_path):
+                shutil.move(file_path, quarantine_path)
+                self.result_box.append(f"File restored from quarantine: {file_path}")
+                self.load_quarantine()
+            else:
+                self.show_file_not_found_message(file_path)
+        else:
+            self.show_no_file_selected_message()
+
+    # Add helper method to show the "No file selected" message
+    def show_no_file_selected_message(self):
+        msg = QMessageBox(self)
+        msg.setIcon(QMessageBox.Warning)
+        msg.setWindowTitle("No File Selected")
+        msg.setText("Please select a file to delete or restore.")
+        msg.setStandardButtons(QMessageBox.Ok)
+        msg.exec_()
+
+    # Add helper method to show "File not found" message
+    def show_file_not_found_message(self, file_path):
+        msg = QMessageBox(self)
+        msg.setIcon(QMessageBox.Warning)
+        msg.setWindowTitle("File Not Found")
+        msg.setText(f"The file '{file_path}' was not found.")
+        msg.setStandardButtons(QMessageBox.Ok)
+        msg.exec_()
 
