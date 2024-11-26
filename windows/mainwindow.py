@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import (
-    QWidget, QPushButton, QFileDialog, QApplication, QProgressBar, QTextEdit, QHBoxLayout, QVBoxLayout, QTableWidget, QTableWidgetItem, QMessageBox
+    QWidget, QPushButton, QFileDialog, QApplication, QProgressBar, QTextEdit, QHBoxLayout, QVBoxLayout, QListWidgetItem, QTableWidgetItem, QMessageBox, QListWidget
 )
 from PyQt5.QtCore import Qt
 import os
@@ -113,12 +113,26 @@ class MainWindow(QWidget):
         box.setStyleSheet('background: white; border: 1px solid #ccc; font-size: 14px;')
         return box
 
-    def create_quarantine_table(self):
-        table = QTableWidget()
-        table.setColumnCount(3)
-        table.setHorizontalHeaderLabels(["File Name", "Path", "Date"])
-        table.hide()
-        return table
+    # def create_quarantine_table(self):
+    #     table = QTableWidget()
+    #     table.setColumnCount(3)
+    #     table.setHorizontalHeaderLabels(["File Name", "Path", "Date"])
+    #     table.hide()
+    #     return table
+
+    def create_quarantine_table(self):  # Updated to use QListWidget
+        list_widget = QListWidget()
+        list_widget.setStyleSheet('''
+            QListWidget { background: white; border: 1px solid #ccc; font-size: 14px; }
+            QListWidget::item { padding: 5px; }
+            QListWidget::item:selected { background: #7079f0; color: white; }
+        ''')
+        list_widget.hide()
+        return list_widget
+    
+
+
+
 
     def connect_signals(self):
         self.b_scan_file.clicked.connect(self.scan_file)
@@ -153,8 +167,9 @@ class MainWindow(QWidget):
         self.load_quarantine()
 
     def load_quarantine(self):
+        self.quarantine_table.clear()
         if not os.path.exists(self.QUARANTINE_LOG):
-            self.display_empty_quarantine()
+            self.quarantine_table.addItem("Quarantine is empty")
             return
 
         with open(self.QUARANTINE_LOG, "r") as f:
@@ -166,9 +181,15 @@ class MainWindow(QWidget):
                 self.remove_file_from_log(entry)
 
         if not quarantined_files:
-            self.display_empty_quarantine()
+            self.quarantine_table.addItem("Quarantine is empty")
         else:
-            self.populate_quarantine_table(quarantined_files)
+            for file in quarantined_files:
+                item = QListWidgetItem(f"{file['file_name']} - {file['quarantine_path']} ({file['date']})")
+                item.setData(Qt.UserRole, file)  # Store the file entry as data
+                self.quarantine_table.addItem(item)
+
+        self.b_delete.setVisible(True)
+        self.b_restore.setVisible(True)
 
     def display_empty_quarantine(self):
         self.quarantine_table.setRowCount(1)
@@ -276,12 +297,14 @@ class MainWindow(QWidget):
             json.dump(log_data, f, indent=4)
 
     def delete_selected_file(self):
-        selected_row = self.quarantine_table.currentRow()
-        if selected_row >= 0:  # Check if a row is selected
-            file_path = self.quarantine_table.item(selected_row, 1).text()
+        selected_item = self.quarantine_table.currentItem()
+        if selected_item:  # Check if an item is selected
+            file_entry = selected_item.data(Qt.UserRole)
+            file_path = file_entry["quarantine_path"]
             if os.path.exists(file_path):
                 os.remove(file_path)
                 self.result_box.append(f"🗑 File deleted: {file_path}")
+                self.remove_file_from_log(file_entry)
                 self.load_quarantine()
             else:
                 self.show_file_not_found_message(file_path)
@@ -289,13 +312,15 @@ class MainWindow(QWidget):
             self.show_no_file_selected_message()
 
     def restore_selected_file(self):
-        selected_row = self.quarantine_table.currentRow()
-        if selected_row >= 0:  # Check if a row is selected
-            file_path = self.quarantine_table.item(selected_row, 1).text()
-            quarantine_path = self.quarantine_table.item(selected_row, 0).text()
+        selected_item = self.quarantine_table.currentItem()
+        if selected_item:  # Check if an item is selected
+            file_entry = selected_item.data(Qt.UserRole)
+            file_path = file_entry["quarantine_path"]
+            original_path = os.path.join(os.getcwd(), file_entry["file_name"])
             if os.path.exists(file_path):
-                shutil.move(file_path, quarantine_path)
+                shutil.move(file_path, original_path)
                 self.result_box.append(f"File restored from quarantine: {file_path}")
+                self.remove_file_from_log(file_entry)
                 self.load_quarantine()
             else:
                 self.show_file_not_found_message(file_path)
