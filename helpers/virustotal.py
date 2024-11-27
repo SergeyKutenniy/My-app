@@ -1,7 +1,9 @@
 import requests
 
 
+# API_KEY = '6f53472405a1a61cd2954b97b2d226fba21fc12799f529173c4e973bcf5ba12e'
 API_KEY = '53fc8fcb34397a326376729f594ce29fae66a137ba312f6bf4854ec385dcd67b'
+
 UPLOAD_URL = "https://www.virustotal.com/api/v3/files"
 FILE_INFO_URL = "https://www.virustotal.com/api/v3/files"
 

@@ -7,6 +7,22 @@ import json
 import shutil
 from datetime import datetime
 from helpers import virustotal
+from PyQt5.QtCore import QThread, pyqtSignal
+import time
+
+class FileScanThread(QThread):
+    progress = pyqtSignal(str, dict)  # Сигнал: путь файла и результат
+    finished = pyqtSignal()
+
+    def __init__(self, file_path):
+        super().__init__()
+        self.file_path = file_path
+
+    def run(self):
+        # Выполняем сканирование
+        result = virustotal.upload_file(self.file_path)
+        self.progress.emit(self.file_path, result)  # Передаем результат проверки
+        self.finished.emit()
 
 
 class MainWindow(QWidget):
@@ -113,12 +129,6 @@ class MainWindow(QWidget):
         box.setStyleSheet('background: white; border: 1px solid #ccc; font-size: 14px;')
         return box
 
-    # def create_quarantine_table(self):
-    #     table = QTableWidget()
-    #     table.setColumnCount(3)
-    #     table.setHorizontalHeaderLabels(["File Name", "Path", "Date"])
-    #     table.hide()
-    #     return table
 
     def create_quarantine_table(self):  # Updated to use QListWidget
         list_widget = QListWidget()
@@ -130,9 +140,6 @@ class MainWindow(QWidget):
         list_widget.hide()
         return list_widget
     
-
-
-
 
     def connect_signals(self):
         self.b_scan_file.clicked.connect(self.scan_file)
@@ -221,25 +228,126 @@ class MainWindow(QWidget):
     def scan_files(self, files):
         self.result_box.clear()
         self.progress_bar.setValue(0)
+        self.threads = []
         total_files = len(files)
-        infected_files = []
+        self.processed_files = 0
+        self.infected_files = []
 
-        for i, file_path in enumerate(files, start=1):
-            self.progress_bar.setValue(int((i / total_files) * 100))
-            vt_result = virustotal.upload_file(file_path)
-            self.display_scan_result(vt_result, file_path)
-            if vt_result.get('malicious_count', 0) > 0:
-                infected_files.append(file_path)
+        for file_path in files:
+            thread = FileScanThread(file_path)
+            thread.progress.connect(self.handle_scan_result)  # Обрабатываем результаты
+            thread.finished.connect(self.update_progress_bar)
+            self.threads.append(thread)
+            thread.start()
+
+    def handle_scan_result(self, file_path, result):
+        self.result_box.append(f"Scan Results for file: {file_path}")
+        self.result_box.append("=" * 50)
+
+        if "error" in result:
+            error_message = result["error"]
+            self.result_box.append(f"Scan Error: {error_message}")
+
+            # Проверяем на ошибку 429
+            if "429" in error_message or "Too Many Requests" in error_message:
+                self.result_box.append("⚠️ Error 429: Too many requests.")
+                retry = self.show_retry_dialog(file_path)
+                if retry:
+                    self.retry_scan(file_path)
+                else:
+                    self.result_box.append(f"❌ Skipping file: {file_path}")
+            else:
+                self.result_box.append("⚠️ An error occurred. Skipping file.")
+        else:
+            malicious_count = result.get('malicious_count', 0)
+            if malicious_count > 0:
+                self.result_box.append(f"⚠️ Malicious file detected: {file_path} (Malicious count: {malicious_count})")
+                self.infected_files.append(file_path)
+
+                # Показываем диалог и обрабатываем выбор
                 action = self.show_infected_file_dialog(file_path)
                 self.handle_infected_file_action(action, file_path)
             else:
                 self.result_box.append("✅ File is safe.")
 
-        if infected_files:
-            self.result_box.append(f"\nResults: Found {len(infected_files)} infected file(s).")
-        else:
-            self.result_box.append("Results: All files are safe.")
-        self.result_box.append("\nScanning complete.")
+        self.result_box.append("=" * 50 + "\n")
+
+
+    def show_retry_dialog(self, file_path):
+        msg_box = QMessageBox(self)
+        msg_box.setIcon(QMessageBox.Warning)
+        msg_box.setWindowTitle("Too Many Requests")
+        msg_box.setText(f"The file {file_path} could not be scanned due to too many requests.")
+        msg_box.setInformativeText("Would you like to try scanning it again?")
+    
+        # Добавляем кнопки
+        retry_button = msg_box.addButton("Retry", QMessageBox.AcceptRole)
+        skip_button = msg_box.addButton("Skip", QMessageBox.RejectRole)
+
+        # Запускаем диалог
+        msg_box.exec_()
+
+        # Пытаемся вернуть, какая кнопка была нажата
+        if msg_box.clickedButton() == retry_button:
+            return True  # Retry
+        elif msg_box.clickedButton() == skip_button:
+            return False  # Skip
+        return False  # По умолчанию, если ошибка
+
+
+    def retry_scan(self, file_path, retries=3):
+        """Повторяет сканирование файла до заданного количества попыток."""
+        for attempt in range(retries):
+            self.result_box.append(f"Retrying scan for {file_path}... (Attempt {attempt + 1}/{retries})")
+            result = virustotal.upload_file(file_path)
+            if "error" in result and "429" in result["error"]:
+                time.sleep(5)  # Ждём перед повторной попыткой
+            else:
+                self.handle_scan_result(file_path, result)
+                return
+
+        # Если после всех попыток ошибка сохраняется
+        self.result_box.append(f"❌ Failed to scan {file_path} after {retries} attempts. Skipping file.")
+
+
+    def update_scan_result(self, file_path, scan_result):
+            # Выводим результат в текстовое поле
+            self.result_box.append(f"Scan Results for file: {file_path}")
+            self.result_box.append("=" * 50)
+            if "error" in scan_result:
+                self.result_box.append(f"Scan Error: {scan_result['error']}")
+            else:
+                self.result_box.append(f"Total checks: {sum(scan_result.get(f'{category}_count', 0) for category in ['malicious', 'harmless', 'suspicious', 'undetected'])}")
+                for category in ['malicious', 'harmless', 'suspicious', 'undetected']:
+                    self.result_box.append(f"{category.capitalize()}: {scan_result.get(f'{category}_count', 0)}")
+        
+            self.result_box.append("\n" + "=" * 50 + "\n")
+            self.result_box.ensureCursorVisible()
+
+    def scan_single_file(self, file_path):
+        retry_count = 3  # Максимальное количество повторных попыток
+        for attempt in range(retry_count):
+            scan_result = virustotal.upload_file(file_path)
+            if "error" in scan_result and "429" in scan_result["error"]:
+                time.sleep(5)  # Ждём 5 секунд перед повторной попыткой
+            else:
+                break  # Успешно, выходим из цикла
+        self.update_scan_result(file_path, scan_result)
+        self.update_progress_bar()
+
+
+    def update_progress_bar(self):
+        self.processed_files += 1
+        total_files = len(self.threads)
+        self.progress_bar.setValue(int((self.processed_files / total_files) * 100))
+
+        if self.processed_files == total_files:  # Все файлы обработаны
+            if self.infected_files:
+                self.result_box.append(f"\nResults: Found {len(self.infected_files)} infected file(s).")
+            else:
+                self.result_box.append("Results: All files are safe.")
+            self.result_box.append("\nScanning complete.")
+
 
     def display_scan_result(self, vt_result, file_path):
         self.result_box.append(f"Scan Results for file: {file_path}")
@@ -260,19 +368,47 @@ class MainWindow(QWidget):
         msg_box.setWindowTitle("Threat Detected")
         msg_box.setText(f"The file {file_path} is infected.")
         msg_box.setInformativeText("Select an action:")
-        msg_box.addButton("Quarantine", QMessageBox.AcceptRole)
-        msg_box.addButton("Delete", QMessageBox.DestructiveRole)
-        msg_box.addButton("Skip", QMessageBox.RejectRole)
-        return msg_box.exec_()
+    
+        # Создаем кнопки
+        quarantine_button = msg_box.addButton("Quarantine", QMessageBox.AcceptRole)
+        delete_button = msg_box.addButton("Delete", QMessageBox.DestructiveRole)
+        skip_button = msg_box.addButton("Skip", QMessageBox.RejectRole)
+
+        msg_box.exec_()  # Показываем диалог
+
+        # Проверяем, какая кнопка была нажата
+        if msg_box.clickedButton() == quarantine_button:
+            return "quarantine"
+        elif msg_box.clickedButton() == delete_button:
+            return "delete"
+        elif msg_box.clickedButton() == skip_button:
+            return "skip"
+        else:
+            return None  # Если что-то пошло не так
 
     def handle_infected_file_action(self, action, file_path):
-        if action == QMessageBox.AcceptRole:
-            self.move_to_quarantine(file_path)
-        elif action == QMessageBox.DestructiveRole:
-            os.remove(file_path)
-            self.result_box.append(f"🗑 File deleted: {file_path}")
+        if action == "quarantine":
+            self.quarantine_file(file_path)
+        elif action == "delete":
+            self.delete_file(file_path)
+        elif action == "skip":
+            self.skip_file(file_path)
         else:
-            self.result_box.append(f"File skipped: {file_path}")
+            self.result_box.append(f"Unknown action for {file_path}")
+
+    # Методы для обработки действий
+    def quarantine_file(self, file_path):
+        self.result_box.append(f"🛡 File moved to quarantine: {file_path}")
+        self.move_to_quarantine(file_path)
+
+    def delete_file(self, file_path):
+         os.remove(file_path)
+         self.result_box.append(f"🗑 File deleted: {file_path}")
+
+    def skip_file(self, file_path):
+        self.result_box.append(f"⏩ File skipped: {file_path}")
+        # Ничего не делаем
+
 
     def move_to_quarantine(self, file_path):
         quarantine_path = os.path.join(self.QUARANTINE_FOLDER, os.path.basename(file_path))
@@ -303,7 +439,7 @@ class MainWindow(QWidget):
             file_path = file_entry["quarantine_path"]
             if os.path.exists(file_path):
                 os.remove(file_path)
-                self.result_box.append(f"🗑 File deleted: {file_path}")
+                self.result_box.append(f"File deleted: {file_path}")
                 self.remove_file_from_log(file_entry)
                 self.load_quarantine()
             else:
