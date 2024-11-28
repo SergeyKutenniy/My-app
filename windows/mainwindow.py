@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import (
-    QWidget, QPushButton, QFileDialog, QApplication, QProgressBar, QTextEdit, QHBoxLayout, QVBoxLayout, QListWidgetItem, QTableWidgetItem, QMessageBox, QListWidget
+    QWidget, QPushButton, QFileDialog, QApplication, QProgressBar, QTextEdit, QHBoxLayout, QVBoxLayout, QListWidgetItem, QTableWidgetItem, QMessageBox, QListWidget, QInputDialog
 )
 from PyQt5.QtCore import Qt
 import os
@@ -70,7 +70,8 @@ class MainWindow(QWidget):
         self.b_exit = QPushButton('Exit')
         self.b_delete = QPushButton("Delete File")
         self.b_restore = QPushButton("Restore File")
-
+        self.b_scan_url = QPushButton('Scan URL')
+        
         # Apply style to buttons
         self.b_scan_file.setStyleSheet(button_style)
         self.b_scan_folder.setStyleSheet(button_style)
@@ -78,13 +79,16 @@ class MainWindow(QWidget):
         self.b_exit.setStyleSheet(button_style)
         self.b_delete.setStyleSheet(button_style)  # Assuming you have a delete button
         self.b_restore.setStyleSheet(button_style)
+        self.b_scan_url.setStyleSheet(button_style)
 
         # Create vertical layout for buttons
         buttons_layout = QVBoxLayout()
         buttons_layout.addWidget(self.b_scan_file)
         buttons_layout.addWidget(self.b_scan_folder)
         buttons_layout.addWidget(self.b_quarantine)
+        buttons_layout.addWidget(self.b_scan_url)
         buttons_layout.addWidget(self.b_exit)
+        
 
         # Main layout
         self.main_layout = QHBoxLayout()
@@ -148,6 +152,7 @@ class MainWindow(QWidget):
         self.b_exit.clicked.connect(QApplication.quit)
         self.b_delete.clicked.connect(self.delete_selected_file)
         self.b_restore.clicked.connect(self.restore_selected_file)
+        self.b_scan_url.clicked.connect(self.scan_url)
 
     def scan_file(self):
         self.show_scan_view()
@@ -161,6 +166,53 @@ class MainWindow(QWidget):
         if directory:
             files = [os.path.join(root, file) for root, _, files in os.walk(directory) for file in files]
             self.scan_files(files)
+
+    def scan_url(self):
+        # Показываем диалоговое окно для ввода URL
+        url, ok = QInputDialog.getText(self, "Scan URL", "Enter URL for scanning:")
+        if ok and url:
+            self.result_box.append(f"Scanning URL: {url}\nPlease wait...")
+            QApplication.processEvents()  # Обновляем интерфейс
+            result = virustotal.scan_url(url)
+            self.display_url_scan_result(url, result)
+            self.progress_bar.setValue(100)
+
+    def display_url_scan_result(self, url, result):
+        # Очищаем поле результатов
+        self.result_box.clear()
+        self.result_box.append(f"Scan Results for URL: {url}")
+        self.result_box.append("=" * 50)
+
+        if "error" in result:
+            self.result_box.append(f"Scan Error: {result['error']}")
+            return
+
+        # Разбираем результаты анализа
+        analysis_data = result.get("data", {}).get("attributes", {})
+        malicious_count = analysis_data.get("stats", {}).get("malicious", 0)
+        total_votes = analysis_data.get("stats", {}).get("total", 0)
+        reputation = analysis_data.get("reputation", "Unknown")
+        last_analysis_results = analysis_data.get("last_analysis_results", {})
+
+        # Отображаем основные данные
+        self.result_box.append(f"Total Votes: {total_votes}")
+        self.result_box.append(f"Malicious Reports: {malicious_count}")
+        self.result_box.append(f"Reputation: {reputation}")
+        self.result_box.append("\nDetailed Results:")
+
+        # Подробный анализ от поставщиков
+        for engine, details in last_analysis_results.items():
+            category = details.get("category", "unknown")
+            result = details.get("result", "clean")
+            self.result_box.append(f"{engine}: {category} ({result})")
+
+        if malicious_count > 0:
+            self.result_box.append("❌ URL is flagged as malicious!")
+        else:
+            self.result_box.append("✅ URL appears safe.")
+
+        self.result_box.append("=" * 50)
+        self.result_box.ensureCursorVisible()
 
     def show_scan_view(self):
         self.result_box.show()
@@ -195,22 +247,6 @@ class MainWindow(QWidget):
                 item.setData(Qt.UserRole, file)  # Store the file entry as data
                 self.quarantine_table.addItem(item)
 
-        self.b_delete.setVisible(True)
-        self.b_restore.setVisible(True)
-
-    def display_empty_quarantine(self):
-        self.quarantine_table.setRowCount(1)
-        self.quarantine_table.setItem(0, 0, QTableWidgetItem("Quarantine Empty"))
-        self.quarantine_table.setSpan(0, 0, 1, 3)
-
-    def populate_quarantine_table(self, quarantined_files):
-        self.quarantine_table.setRowCount(len(quarantined_files))
-        for row, file in enumerate(quarantined_files):
-            self.quarantine_table.setItem(row, 0, QTableWidgetItem(file["file_name"]))
-            self.quarantine_table.setItem(row, 1, QTableWidgetItem(file["quarantine_path"]))
-            self.quarantine_table.setItem(row, 2, QTableWidgetItem(file["date"]))
-
-        # Show delete and restore buttons when quarantine files are displayed
         self.b_delete.setVisible(True)
         self.b_restore.setVisible(True)
 

@@ -6,6 +6,7 @@ API_KEY = '53fc8fcb34397a326376729f594ce29fae66a137ba312f6bf4854ec385dcd67b'
 
 UPLOAD_URL = "https://www.virustotal.com/api/v3/files"
 FILE_INFO_URL = "https://www.virustotal.com/api/v3/files"
+BASE_URL = "https://www.virustotal.com/api/v3"
 
 
 def upload_file(path):
@@ -94,4 +95,25 @@ def parse_analysis_results(results):
         "engine_results": engine_results
     }
 
-
+def scan_url(url):
+    """Отправляет URL для анализа на VirusTotal и возвращает результаты."""
+    headers = {"x-apikey": API_KEY}
+    submit_url = f"{BASE_URL}/urls"
+    
+    # Отправка URL для анализа
+    response = requests.post(submit_url, headers=headers, data={"url": url})
+    if response.status_code != 200:
+        return {"error": f"Error submitting URL: {response.status_code} {response.text}"}
+    
+    # Получение идентификатора анализа
+    analysis_id = response.json().get("data", {}).get("id")
+    if not analysis_id:
+        return {"error": "Failed to retrieve analysis ID."}
+    
+    # Запрос результатов анализа
+    result_url = f"{BASE_URL}/analyses/{analysis_id}"
+    result_response = requests.get(result_url, headers=headers)
+    if result_response.status_code != 200:
+        return {"error": f"Error fetching analysis results: {result_response.status_code} {result_response.text}"}
+    
+    return result_response.json()
