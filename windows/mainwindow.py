@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import (
-    QWidget, QPushButton, QFileDialog, QApplication, QProgressBar, QTextEdit, QHBoxLayout, QVBoxLayout, QListWidgetItem, QTableWidgetItem, QMessageBox, QListWidget, QInputDialog
+    QWidget, QPushButton, QFileDialog, QApplication, QProgressBar, QTextEdit, QHBoxLayout, QVBoxLayout, QListWidgetItem, QMessageBox, QListWidget, QInputDialog, QDialog, QComboBox, QLabel
 )
 from PyQt5.QtCore import Qt
 import os
@@ -24,6 +24,61 @@ class FileScanThread(QThread):
         self.progress.emit(self.file_path, result)  # Передаем результат проверки
         self.finished.emit()
 
+class SettingsDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Settings")
+        self.resize(400, 200)
+
+        self.language_label = QLabel("Language:")
+        self.language_combo = QComboBox()
+        self.language_combo.addItems(["English", "Українська"])
+
+        self.theme_label = QLabel("Theme:")
+        self.theme_combo = QComboBox()
+        self.theme_combo.addItems(["Light", "Dark"])
+
+        layout = QVBoxLayout()
+        layout.addWidget(self.language_label)
+        layout.addWidget(self.language_combo)
+        layout.addWidget(self.theme_label)
+        layout.addWidget(self.theme_combo)
+
+        self.ok_button = QPushButton("OK")
+        self.cancel_button = QPushButton("Cancel")
+        self.ok_button.clicked.connect(self.accept)
+        self.cancel_button.clicked.connect(self.reject)
+
+        button_layout = QHBoxLayout()
+        button_layout.addWidget(self.ok_button)
+        button_layout.addWidget(self.cancel_button)
+
+        layout.addLayout(button_layout)
+        self.setLayout(layout)
+
+    def get_settings(self):
+        return {
+            "language": self.language_combo.currentText(),
+            "theme": self.theme_combo.currentText()
+        }
+
+class QuarantineWindow(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.theme = "Light"  # Текущая тема
+        self.list_widget = self.create_quarantine_table(self.theme)  # Создаем таблицу с текущей темой
+        layout = QVBoxLayout()
+        layout.addWidget(self.list_widget)
+        self.setLayout(layout)
+
+    def update_theme(self, theme):
+        """Обновление темы таблицы"""
+        self.theme = theme
+        self.list_widget.setParent(None)  # Удаляем текущий виджет
+        self.list_widget = self.create_quarantine_table(self.theme)  # Пересоздаем таблицу
+        self.layout().addWidget(self.list_widget)  # Добавляем новую таблицу
+
+
 
 class MainWindow(QWidget):
     QUARANTINE_FOLDER = "quarantine"
@@ -31,15 +86,20 @@ class MainWindow(QWidget):
 
     def __init__(self):
         super().__init__()
+        self.language = "English"
+        self.theme = "Light"
+        self.list_widget = QListWidget()
+        self.result_box = QTextEdit()  # Инициализация result_box
+        self.result_box.setReadOnly(True)
         self.set_window_properties()
         self.initUI()
         self.connect_signals()
         self.show()
 
     def set_window_properties(self):
-        self.setWindowTitle('Antivirus')
+        self.setWindowTitle('My_Antivirus')
         self.resize(800, 600)
-        self.setStyleSheet('background: rgba(207, 207, 207, 1);')
+        self.setStyleSheet(self.get_theme_stylesheet())
 
     def initUI(self):
         button_style = """
@@ -64,22 +124,21 @@ class MainWindow(QWidget):
     """
 
         # Create buttons
-        self.b_scan_file = QPushButton('Scan File')
-        self.b_scan_folder = QPushButton('Scan Folder')
-        self.b_quarantine = QPushButton('Quarantine')
-        self.b_exit = QPushButton('Exit')
-        self.b_delete = QPushButton("Delete File")
-        self.b_restore = QPushButton("Restore File")
-        self.b_scan_url = QPushButton('Scan URL')
+        self.b_scan_file = QPushButton(self.translate("Scan File"))
+        self.b_scan_folder = QPushButton(self.translate("Scan Folder"))
+        self.b_quarantine = QPushButton(self.translate("Quarantine"))
+        self.b_exit = QPushButton(self.translate("Exit"))
+        self.b_settings = QPushButton(self.translate("Settings"))
+        self.b_delete = QPushButton(self.translate("Delete File"))
+        self.b_restore = QPushButton(self.translate("Restore File"))
+        self.b_scan_url = QPushButton(self.translate('Scan URL'))
         
-        # Apply style to buttons
-        self.b_scan_file.setStyleSheet(button_style)
-        self.b_scan_folder.setStyleSheet(button_style)
-        self.b_quarantine.setStyleSheet(button_style)
-        self.b_exit.setStyleSheet(button_style)
-        self.b_delete.setStyleSheet(button_style)  # Assuming you have a delete button
-        self.b_restore.setStyleSheet(button_style)
-        self.b_scan_url.setStyleSheet(button_style)
+         # Apply style to buttons
+        for button in [
+            self.b_scan_file, self.b_scan_folder, self.b_quarantine,
+            self.b_exit, self.b_settings, self.b_delete, self.b_restore, self.b_scan_url
+        ]:
+            button.setStyleSheet(button_style)
 
         # Create vertical layout for buttons
         buttons_layout = QVBoxLayout()
@@ -87,9 +146,9 @@ class MainWindow(QWidget):
         buttons_layout.addWidget(self.b_scan_folder)
         buttons_layout.addWidget(self.b_quarantine)
         buttons_layout.addWidget(self.b_scan_url)
+        buttons_layout.addWidget(self.b_settings)
         buttons_layout.addWidget(self.b_exit)
         
-
         # Main layout
         self.main_layout = QHBoxLayout()
         self.main_layout.addLayout(buttons_layout, stretch=1)
@@ -97,6 +156,22 @@ class MainWindow(QWidget):
         self.main_layout.addLayout(self.right_layout, stretch=2)
         self.setLayout(self.main_layout)
 
+    def translate(self, text):
+        translations = {
+            "Scan File": "Сканувати файл",
+            "Scan Folder": "Сканувати папку",
+            "Quarantine": "Карантин",
+            "Exit": "Вихід",
+            "Settings": "Налаштування",
+            "Delete File": "Видалити файл",
+            "Restore File": "Відновити файл",
+            "Scan URL": "Сканувати URL"
+        }
+        if self.language == "Українська":
+            return translations.get(text, text)
+        return text
+    
+    
     def create_right_layout(self):
         layout = QVBoxLayout()
         self.progress_bar = self.create_progress_bar()
@@ -134,25 +209,90 @@ class MainWindow(QWidget):
         return box
 
 
-    def create_quarantine_table(self):  # Updated to use QListWidget
-        list_widget = QListWidget()
-        list_widget.setStyleSheet('''
-            QListWidget { background: white; border: 1px solid #ccc; font-size: 14px; }
-            QListWidget::item { padding: 5px; }
-            QListWidget::item:selected { background: #7079f0; color: white; }
-        ''')
-        list_widget.hide()
-        return list_widget
+    def create_quarantine_table(self):  # Добавлен параметр theme
     
+        # Установка стилей в зависимости от темы
+        if self.theme == "Dark":
+            self.list_widget.setStyleSheet('''
+                QListWidget { background: #222; border: 1px solid #555; font-size: 14px; color: white; }
+                QListWidget::item { padding: 5px; }
+                QListWidget::item:selected { background: #5055f0; color: white; }
+            ''')
+        else:
+            self.list_widget.setStyleSheet('''
+                QListWidget { background: white; border: 1px solid #ccc; font-size: 14px; color: black; }
+                QListWidget::item { padding: 5px; }
+                QListWidget::item:selected { background: #7079f0; color: white; }
+            ''')
+    
+        self.list_widget.hide()
+        return self.list_widget
 
     def connect_signals(self):
         self.b_scan_file.clicked.connect(self.scan_file)
         self.b_scan_folder.clicked.connect(self.scan_folder)
         self.b_quarantine.clicked.connect(self.show_quarantine)
         self.b_exit.clicked.connect(QApplication.quit)
+        self.b_settings.clicked.connect(self.open_settings)
         self.b_delete.clicked.connect(self.delete_selected_file)
         self.b_restore.clicked.connect(self.restore_selected_file)
         self.b_scan_url.clicked.connect(self.scan_url)
+
+    def open_settings(self):
+        settings_dialog = SettingsDialog(self)
+        if settings_dialog.exec_() == QDialog.Accepted:
+            settings = settings_dialog.get_settings()
+            self.language = settings["language"]
+            self.theme = settings["theme"]
+            self.update_ui()
+
+    def update_ui(self):
+        self.setStyleSheet(self.get_theme_stylesheet())
+        self.b_scan_file.setText(self.translate("Scan File"))
+        self.b_scan_folder.setText(self.translate("Scan Folder"))
+        self.b_quarantine.setText(self.translate("Quarantine"))
+        self.b_exit.setText(self.translate("Exit"))
+        self.b_settings.setText(self.translate("Settings"))
+        self.b_delete.setText(self.translate("Delete File"))
+        self.b_restore.setText(self.translate("Restore File"))
+        self.b_scan_url.setText(self.translate("Scan URL"))
+
+
+    def get_theme_stylesheet(self):
+        if self.theme == "Dark":
+            # Устанавливаем темный стиль для result_box
+            self.list_widget.setStyleSheet('''
+                QListWidget { background: #222; border: 1px solid #555; font-size: 14px; color: white; }
+                QListWidget::item { padding: 5px; }
+                QListWidget::item:selected { background: #5055f0; color: white; }
+            ''')
+            self.result_box.setStyleSheet(
+                'background: rgba(30, 30, 30, 1); border: 1px solid #666; font-size: 14px; color: white;'
+            )
+            # Возвращаем темный стиль для всей программы
+            return """
+            QWidget { background: #333; color: white; }
+            QPushButton { background: #555; color: white; border: 1px solid #777; }
+            QPushButton:hover { background: #666; }
+            QPushButton:pressed { background: #444; }
+            """
+        else:
+            # Устанавливаем светлый стиль для result_box
+            self.result_box.setStyleSheet(
+                'background: white; border: 1px solid #ccc; font-size: 14px; color: black;'
+            )
+            self.list_widget.setStyleSheet('''
+                QListWidget { background: white; border: 1px solid #ccc; font-size: 14px; color: black; }
+                QListWidget::item { padding: 5px; }
+                QListWidget::item:selected { background: #7079f0; color: white; }
+            ''')
+            # Возвращаем светлый стиль для всей программы
+            return """
+            QWidget { background: #fff; color: black; }
+            QPushButton { background: #ccc; color: black; border: 1px solid #aaa; }
+            QPushButton:hover { background: #ddd; }
+            QPushButton:pressed { background: #bbb; }
+            """
 
     def scan_file(self):
         self.show_scan_view()
@@ -286,18 +426,18 @@ class MainWindow(QWidget):
 
             # Проверяем на ошибку 429
             if "429" in error_message or "Too Many Requests" in error_message:
-                self.result_box.append("⚠️ Error 429: Too many requests.")
+                self.result_box.append("❗️ Error 429: Too many requests.")
                 retry = self.show_retry_dialog(file_path)
                 if retry:
                     self.retry_scan(file_path)
                 else:
-                    self.result_box.append(f"❌ Skipping file: {file_path}")
+                    self.result_box.append(f"❗️ Skipping file: {file_path}")
             else:
-                self.result_box.append("⚠️ An error occurred. Skipping file.")
+                self.result_box.append("❗️ An error occurred. Skipping file.")
         else:
             malicious_count = result.get('malicious_count', 0)
             if malicious_count > 0:
-                self.result_box.append(f"⚠️ Malicious file detected: {file_path} (Malicious count: {malicious_count})")
+                self.result_box.append(f"❌ Malicious file detected: {file_path} (Malicious count: {malicious_count})")
                 self.infected_files.append(file_path)
 
                 # Показываем диалог и обрабатываем выбор
@@ -337,7 +477,7 @@ class MainWindow(QWidget):
             self.result_box.append(f"Retrying scan for {file_path}... (Attempt {attempt + 1}/{retries})")
             result = virustotal.upload_file(file_path)
             if "error" in result and "429" in result["error"]:
-                time.sleep(5)  # Ждём перед повторной попыткой
+                time.sleep(1)  # Ждём перед повторной попыткой
             else:
                 self.handle_scan_result(file_path, result)
                 return
@@ -434,7 +574,7 @@ class MainWindow(QWidget):
 
     # Методы для обработки действий
     def quarantine_file(self, file_path):
-        self.result_box.append(f"🛡 File moved to quarantine: {file_path}")
+        self.result_box.append(f"⭕️ File moved to quarantine: {file_path}")
         self.move_to_quarantine(file_path)
 
     def delete_file(self, file_path):

@@ -1,1 +1,8 @@
-[]
+[
+    {
+        "file_name": "eicar.com",
+        "quarantine_path": "quarantine/eicar.com",
+        "date": "2024-12-04 20:02:38",
+        "status": "quarantined"
+    }
+]
