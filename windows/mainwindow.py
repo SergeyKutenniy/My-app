@@ -7,6 +7,7 @@ import json
 import shutil
 from datetime import datetime
 from helpers import virustotal
+from dictionary import translations
 from PyQt5.QtCore import QThread, pyqtSignal
 import time
 
@@ -95,6 +96,7 @@ class MainWindow(QWidget):
         self.initUI()
         self.connect_signals()
         self.show()
+        
 
     def set_window_properties(self):
         self.setWindowTitle('My_Antivirus')
@@ -165,7 +167,16 @@ class MainWindow(QWidget):
             "Settings": "Налаштування",
             "Delete File": "Видалити файл",
             "Restore File": "Відновити файл",
-            "Scan URL": "Сканувати URL"
+            "Scan URL": "Сканувати URL",
+            "Scan Results for file": "Результати сканування файлу:",
+            "Scan Error": "Помилка сканування",
+            "⛔️Error 429: Too many requests.": "⛔️Помилка 429: Забагато запитів.",
+            "⏩️Skipping file": "⏩️Пропускаємо файл",
+            "An error occurred. Skipping file.": "Сталася помилка. Пропускаємо файл.",
+            "❌Malicious file detected": "❌Виявлено шкідливий файл",
+            "❗️Malicious count": "❗️Кількість антивірусів, які виявили шкідливий файл:",
+            "✅File is safe.": "✅Файл безпечний",
+            "Scanning complete": "Сканування завершено",
         }
         if self.language == "Українська":
             return translations.get(text, text)
@@ -417,36 +428,39 @@ class MainWindow(QWidget):
             thread.start()
 
     def handle_scan_result(self, file_path, result):
-        self.result_box.append(f"Scan Results for file: {file_path}")
+        # Переводим сообщения перед отображением
+        self.result_box.append(f"{self.translate('Scan Results for file')}: {file_path}")
         self.result_box.append("=" * 50)
 
         if "error" in result:
             error_message = result["error"]
-            self.result_box.append(f"Scan Error: {error_message}")
+            self.result_box.append(f"{self.translate('Scan Error')}: {error_message}")
 
             # Проверяем на ошибку 429
             if "429" in error_message or "Too Many Requests" in error_message:
-                self.result_box.append("❗️ Error 429: Too many requests.")
+                self.result_box.append(f"{self.translate('⛔️Error 429: Too many requests.')}")
                 retry = self.show_retry_dialog(file_path)
                 if retry:
                     self.retry_scan(file_path)
                 else:
-                    self.result_box.append(f"❗️ Skipping file: {file_path}")
+                    self.result_box.append(f"{self.translate('⏩️Skipping file')}: {file_path}")
             else:
-                self.result_box.append("❗️ An error occurred. Skipping file.")
+                self.result_box.append(f"{self.translate('An error occurred. Skipping file.')}")
         else:
             malicious_count = result.get('malicious_count', 0)
             if malicious_count > 0:
-                self.result_box.append(f"❌ Malicious file detected: {file_path} (Malicious count: {malicious_count})")
+                self.result_box.append(f"{self.translate('❌Malicious file detected')}: {file_path}")
+                self.result_box.append(f"{self.translate('❗️Malicious count')}: {malicious_count}")
                 self.infected_files.append(file_path)
 
                 # Показываем диалог и обрабатываем выбор
                 action = self.show_infected_file_dialog(file_path)
                 self.handle_infected_file_action(action, file_path)
             else:
-                self.result_box.append("✅ File is safe.")
+                self.result_box.append(f"{self.translate('✅File is safe.')}")
 
         self.result_box.append("=" * 50 + "\n")
+
 
 
     def show_retry_dialog(self, file_path):
@@ -522,7 +536,7 @@ class MainWindow(QWidget):
                 self.result_box.append(f"\nResults: Found {len(self.infected_files)} infected file(s).")
             else:
                 self.result_box.append("Results: All files are safe.")
-            self.result_box.append("\nScanning complete.")
+            self.result_box.append(f"{self.translate('Scanning complete')}")
 
 
     def display_scan_result(self, vt_result, file_path):
