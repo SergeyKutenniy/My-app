@@ -167,14 +167,15 @@ class MainWindow(QWidget):
             "Delete File": "Видалити файл",
             "Restore File": "Відновити файл",
             "Scan URL": "Сканувати URL",
-            "Scan Results for file": "Результати сканування файлу:",
+            "Scan Results for URL:": "Результати сканування URL-адреси:",
             "Scan Error": "Помилка сканування",
             "⛔️Error 429: Too many requests.": "⛔️Помилка 429: Забагато запитів.",
             "⏩️Skipping file": "⏩️Пропускаємо файл",
             "An error occurred. Skipping file.": "Сталася помилка. Пропускаємо файл.",
             "❌Malicious file detected": "❌Виявлено шкідливий файл",
-            "❗️Malicious count": "❗️Кількість антивірусів, які виявили шкідливий файл:",
+            "❗️Number of security providers": "❗️Кількість антивірусів, які виявили шкідливий файл:",
             "✅File is safe.": "✅Файл безпечний",
+            "General results: All files are safe.": "Загальний результат: Всі файли безпечні",
             "Scanning complete": "Сканування завершено",
         }
         if self.language == "Українська":
@@ -289,7 +290,7 @@ class MainWindow(QWidget):
         else:
             # Устанавливаем светлый стиль для result_box
             self.result_box.setStyleSheet(
-                'background: white; border: 1px solid #ccc; font-size: 14px; color: black;'
+                'background: white; border: 1px solid #ccc; border-radius: 0.5em; font-size: 14px; color: black;'
             )
             self.list_widget.setStyleSheet('''
                 QListWidget { background: white; border: 1px solid #ccc; font-size: 14px; color: black; }
@@ -298,7 +299,7 @@ class MainWindow(QWidget):
             ''')
             # Возвращаем светлый стиль для всей программы
             return """
-            QWidget { background: #fff; color: black; }
+            QWidget { background: #EEEFF0; color: black; }
             QPushButton { background: #ccc; color: black; border: 1px solid #aaa; }
             QPushButton:hover { background: #ddd; }
             QPushButton:pressed { background: #bbb; }
@@ -330,7 +331,7 @@ class MainWindow(QWidget):
     def display_url_scan_result(self, url, result):
         # Очищаем поле результатов
         self.result_box.clear()
-        self.result_box.append(f"Scan Results for URL: {url}")
+        self.result_box.append(self.translate("Scan Results for URL:") + f" {url}")
         self.result_box.append("=" * 50)
 
         if "error" in result:
@@ -345,7 +346,6 @@ class MainWindow(QWidget):
         last_analysis_results = analysis_data.get("last_analysis_results", {})
 
         # Отображаем основные данные
-        self.result_box.append(f"Total Votes: {total_votes}")
         self.result_box.append(f"Malicious Reports: {malicious_count}")
         self.result_box.append(f"Reputation: {reputation}")
         self.result_box.append("\nDetailed Results:")
@@ -362,6 +362,7 @@ class MainWindow(QWidget):
             self.result_box.append("✅ URL appears safe.")
 
         self.result_box.append("=" * 50)
+        self.result_box.append(f"{self.translate('Scanning complete')}")
         self.result_box.ensureCursorVisible()
 
     def show_scan_view(self):
@@ -449,7 +450,7 @@ class MainWindow(QWidget):
             malicious_count = result.get('malicious_count', 0)
             if malicious_count > 0:
                 self.result_box.append(f"{self.translate('❌Malicious file detected')}: {file_path}")
-                self.result_box.append(f"{self.translate('❗️Malicious count')}: {malicious_count}")
+                self.result_box.append(f"{self.translate('❗️Number of security providers')}: {malicious_count}")
                 self.infected_files.append(file_path)
 
                 # Показываем диалог и обрабатываем выбор
@@ -532,9 +533,10 @@ class MainWindow(QWidget):
 
         if self.processed_files == total_files:  # Все файлы обработаны
             if self.infected_files:
-                self.result_box.append(f"\nResults: Found {len(self.infected_files)} infected file(s).")
+                self.result_box.append(f"\nGeneral result: Found {len(self.infected_files)} infected file(s).")
             else:
-                self.result_box.append("Results: All files are safe.")
+                self.result_box.append(f"{self.translate('General results: All files are safe.')}")
+            self.result_box.append("=" * 50)
             self.result_box.append(f"{self.translate('Scanning complete')}")
 
 
