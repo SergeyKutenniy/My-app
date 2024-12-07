@@ -7,7 +7,6 @@ import json
 import shutil
 from datetime import datetime
 from helpers import virustotal
-from dictionary import translations
 from PyQt5.QtCore import QThread, pyqtSignal
 import time
 
@@ -208,15 +207,15 @@ class MainWindow(QWidget):
         bar = QProgressBar()
         bar.setValue(0)
         bar.setStyleSheet('''
-            QProgressBar { border: 1px solid #7079f0; text-align: center; color: black; background: #fff; }
-            QProgressBar::chunk { background: #7079f0; }
+            QProgressBar { border: 2px solid #7079f0; border-radius: 0.5em; text-align: center; color: black; background: #fff; }
+            QProgressBar::chunk { background: #7079f0; border-radius: 0.2em;}
         ''')
         return bar
 
     def create_result_box(self):
         box = QTextEdit()
         box.setReadOnly(True)
-        box.setStyleSheet('background: white; border: 1px solid #ccc; font-size: 14px;')
+        box.setStyleSheet('background: white; border-radius: 0.5em; border: 1px solid #ccc; font-size: 14px;')
         return box
 
 
@@ -278,7 +277,7 @@ class MainWindow(QWidget):
                 QListWidget::item:selected { background: #5055f0; color: white; }
             ''')
             self.result_box.setStyleSheet(
-                'background: rgba(30, 30, 30, 1); border: 1px solid #666; font-size: 14px; color: white;'
+                'background: rgba(30, 30, 30, 1); border: 1px solid #666; border-radius: 0.5em; font-size: 14px; color: white;'
             )
             # Возвращаем темный стиль для всей программы
             return """
