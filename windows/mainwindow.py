@@ -167,6 +167,7 @@ class MainWindow(QWidget):
             "Delete File": "Видалити файл",
             "Restore File": "Відновити файл",
             "Scan URL": "Сканувати URL",
+            "Enter URL for scanning:": "Введіть URL для сканування:",
             "Scan Results for file": "Результат сканування файлу:",
             "Scan Results for URL:": "Результати сканування URL-адреси:",
             "Scan Error": "Помилка сканування",
@@ -326,13 +327,76 @@ class MainWindow(QWidget):
 
     def scan_url(self):
         # Показываем диалоговое окно для ввода URL
-        url, ok = QInputDialog.getText(self, "Scan URL", "Enter URL for scanning:")
-        if ok and url:
-            self.result_box.append(f"Scanning URL: {url}\nPlease wait...")
-            QApplication.processEvents()  # Обновляем интерфейс
-            result = virustotal.scan_url(url)
-            self.display_url_scan_result(url, result)
-            self.progress_bar.setValue(100)
+        dialog = QInputDialog(self)
+        dialog.setWindowTitle(f"{self.translate('Scan URL')}")
+        dialog.setLabelText(f"{self.translate('Enter URL for scanning:')}")
+        dialog.resize(400, 200)  # Устанавливаем размер окна (ширина, высота)
+        # Устанавливаем стили для диалогового окна
+        if self.theme == "Dark":
+            dialog.setStyleSheet("""
+            QInputDialog {
+                background-color: #333333; /* Цвет фона диалогового окна */
+                border: 1px solid #333333; /* Граница окна */
+                border-radius: 8px; /* Закругленные углы */
+            }
+            QLabel {
+                color: white; /* Цвет текста заголовка */
+                font-size: 14px; /* Размер шрифта текста */
+            }
+            QLineEdit {
+                background-color: #1E1E1E; /* Цвет фона текстового поля */
+                color: white; /* Цвет текста */
+                border: 1px solid #d3d3d3; /* Граница текстового поля */
+                border-radius: 4px; /* Закругленные углы */
+                padding: 5px; /* Внутренний отступ */
+            }
+            QPushButton {
+                background: #7079f0;
+                color: white;
+                min-width: 100px;
+                font-size: 14px;
+                font-weight: 500;
+                border-radius: 0.5em;
+                border: none;
+                height: 1.5em;
+            }
+
+            QPushButton:hover {
+                background: #5b65f5;
+            }
+
+            QPushButton:pressed {
+                background: #404df7;  
+            }
+        """)
+        else:
+            self.setStyleSheet("""
+            QInputDialog {
+                background-color: #f9f9f9; /* Цвет фона диалогового окна */
+                border: 1px solid #d3d3d3; /* Граница окна */
+                border-radius: 8px; /* Закругленные углы */
+            }
+            QLabel {
+                color: #333; /* Цвет текста заголовка */
+                font-size: 14px; /* Размер шрифта текста */
+            }
+            QLineEdit {
+                background-color: #ffffff; /* Цвет фона текстового поля */
+                color: #000; /* Цвет текста */
+                border: 1px solid #d3d3d3; /* Граница текстового поля */
+                border-radius: 4px; /* Закругленные углы */
+                padding: 5px; /* Внутренний отступ */
+            }
+        """)
+        
+        if dialog.exec_() == QInputDialog.Accepted:
+            url = dialog.textValue()
+            if url:
+                self.result_box.append(f"Scanning URL: {url}\nPlease wait...")
+                QApplication.processEvents()  # Обновляем интерфейс
+                result = virustotal.scan_url(url)
+                self.display_url_scan_result(url, result)
+                self.progress_bar.setValue(100)
 
     def display_url_scan_result(self, url, result):
         # Очищаем поле результатов
