@@ -25,28 +25,35 @@ class FileScanThread(QThread):
         self.finished.emit()
 
 class SettingsDialog(QDialog):
-    def __init__(self, parent=None):
+    def __init__(self, current_language, current_theme, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Settings")
+        self.language = current_language  # Получаем текущий язык
+        self.theme = current_theme
+        self.setWindowTitle(self.translate("Settings"))  # Переводим заголовок
         self.resize(400, 200)
 
-        self.language_label = QLabel("Language:")
+        # Элементы интерфейса
+        self.language_label = QLabel(self.translate("Language:"))
         self.language_combo = QComboBox()
         self.language_combo.addItems(["English", "Українська"])
+        self.language_combo.setCurrentText(self.language)  # Устанавливаем текущий язык
 
-        self.theme_label = QLabel("Theme:")
+        self.theme_label = QLabel(self.translate("Theme:"))
         self.theme_combo = QComboBox()
         self.theme_combo.addItems(["Light", "Dark"])
+        self.theme_combo.setCurrentText(self.theme)
 
+        # Компоновка
         layout = QVBoxLayout()
         layout.addWidget(self.language_label)
         layout.addWidget(self.language_combo)
         layout.addWidget(self.theme_label)
         layout.addWidget(self.theme_combo)
 
-        self.ok_button = QPushButton("OK")
-        self.cancel_button = QPushButton("Cancel")
-        self.ok_button.clicked.connect(self.accept)
+        # Кнопки
+        self.ok_button = QPushButton(self.translate("OK"))
+        self.cancel_button = QPushButton(self.translate("Cancel"))
+        self.ok_button.clicked.connect(self.apply_settings)
         self.cancel_button.clicked.connect(self.reject)
 
         button_layout = QHBoxLayout()
@@ -56,11 +63,31 @@ class SettingsDialog(QDialog):
         layout.addLayout(button_layout)
         self.setLayout(layout)
 
+    def apply_settings(self):
+        """Применяем настройки и закрываем окно."""
+        self.language = self.language_combo.currentText()
+        self.accept()
+
     def get_settings(self):
+        """Возвращает выбранные настройки."""
         return {
             "language": self.language_combo.currentText(),
             "theme": self.theme_combo.currentText()
         }
+
+    def translate(self, text):
+        """Функция перевода текста."""
+        translations = {
+            "Settings": "Налаштування",
+            "Language:": "Мова:",
+            "Theme:": "Тема:",
+            "OK": "ОК",
+            "Cancel": "Відміна",
+        }
+        if self.language == "Українська":
+            return translations.get(text, text)
+        return text
+
 
 class QuarantineWindow(QWidget):
     def __init__(self):
@@ -129,7 +156,7 @@ class MainWindow(QWidget):
         self.b_scan_folder = QPushButton(self.translate("Scan Folder"))
         self.b_quarantine = QPushButton(self.translate("Quarantine"))
         self.b_exit = QPushButton(self.translate("Exit"))
-        self.b_settings = QPushButton(self.translate("Settings"))
+        self.b_settings = QPushButton(self.translate("Settings"), self)
         self.b_delete = QPushButton(self.translate("Delete File"))
         self.b_restore = QPushButton(self.translate("Restore File"))
         self.b_scan_url = QPushButton(self.translate('Scan URL'))
@@ -257,7 +284,7 @@ class MainWindow(QWidget):
         self.b_scan_url.clicked.connect(self.scan_url)
 
     def open_settings(self):
-        settings_dialog = SettingsDialog(self)
+        settings_dialog = SettingsDialog(self.language, self.theme, self)
         if settings_dialog.exec_() == QDialog.Accepted:
             settings = settings_dialog.get_settings()
             self.language = settings["language"]
