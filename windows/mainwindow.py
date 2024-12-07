@@ -167,16 +167,22 @@ class MainWindow(QWidget):
             "Delete File": "Видалити файл",
             "Restore File": "Відновити файл",
             "Scan URL": "Сканувати URL",
+            "Scan Results for file": "Результат сканування файлу:",
             "Scan Results for URL:": "Результати сканування URL-адреси:",
             "Scan Error": "Помилка сканування",
-            "⛔️Error 429: Too many requests.": "⛔️Помилка 429: Забагато запитів.",
-            "⏩️Skipping file": "⏩️Пропускаємо файл",
+            "⛔️ Error 429: Too many requests.": "⛔️ Помилка 429: Забагато запитів.",
+            "Skipped": "⏩️ Файл пропущено",
+            "🗑 File deleted": "🗑 Файл видалено",
+            "⭕️ File moved to quarantine": "⭕️ Файл переміщено до карантину",
             "An error occurred. Skipping file.": "Сталася помилка. Пропускаємо файл.",
-            "❌Malicious file detected": "❌Виявлено шкідливий файл",
-            "❗️Number of security providers": "❗️Кількість антивірусів, які виявили шкідливий файл:",
-            "✅File is safe.": "✅Файл безпечний",
-            "General results: All files are safe.": "Загальний результат: Всі файли безпечні",
+            "❌ Malicious file detected": "❌ Виявлено шкідливий файл",
+            "❗️ Number of security providers": "❗️ Кількість антивірусів, які виявили шкідливий файл:",
+            "✅ File is safe.": "✅ Файл безпечний",
+            "General result: All files are safe.": "Загальний результат: Всі файли безпечні",
+            "General result: Found": "Загальний результат: Знайдено",
+            " infected file(s).": " заражений(их) файл(ів)",
             "Scanning complete": "Сканування завершено",
+            "Quarantine is empty": "Карантин пустий",
         }
         if self.language == "Українська":
             return translations.get(text, text)
@@ -379,7 +385,7 @@ class MainWindow(QWidget):
     def load_quarantine(self):
         self.quarantine_table.clear()
         if not os.path.exists(self.QUARANTINE_LOG):
-            self.quarantine_table.addItem("Quarantine is empty")
+            self.quarantine_table.addItem(f"{self.translate('Quarantine is empty')}")
             return
 
         with open(self.QUARANTINE_LOG, "r") as f:
@@ -391,7 +397,7 @@ class MainWindow(QWidget):
                 self.remove_file_from_log(entry)
 
         if not quarantined_files:
-            self.quarantine_table.addItem("Quarantine is empty")
+            self.quarantine_table.addItem(f"{self.translate('Quarantine is empty')}")
         else:
             for file in quarantined_files:
                 item = QListWidgetItem(f"{file['file_name']} - {file['quarantine_path']} ({file['date']})")
@@ -438,26 +444,26 @@ class MainWindow(QWidget):
 
             # Проверяем на ошибку 429
             if "429" in error_message or "Too Many Requests" in error_message:
-                self.result_box.append(f"{self.translate('⛔️Error 429: Too many requests.')}")
+                self.result_box.append(f"{self.translate('⛔️ Error 429: Too many requests.')}")
                 retry = self.show_retry_dialog(file_path)
                 if retry:
                     self.retry_scan(file_path)
                 else:
-                    self.result_box.append(f"{self.translate('⏩️Skipping file')}: {file_path}")
+                    self.result_box.append(f"{self.translate('Skipped')}: {file_path}")
             else:
                 self.result_box.append(f"{self.translate('An error occurred. Skipping file.')}")
         else:
             malicious_count = result.get('malicious_count', 0)
             if malicious_count > 0:
-                self.result_box.append(f"{self.translate('❌Malicious file detected')}: {file_path}")
-                self.result_box.append(f"{self.translate('❗️Number of security providers')}: {malicious_count}")
+                self.result_box.append(f"{self.translate('❌ Malicious file detected')}: {file_path}")
+                self.result_box.append(f"{self.translate('❗️ Number of security providers')}: {malicious_count}")
                 self.infected_files.append(file_path)
 
                 # Показываем диалог и обрабатываем выбор
                 action = self.show_infected_file_dialog(file_path)
                 self.handle_infected_file_action(action, file_path)
             else:
-                self.result_box.append(f"{self.translate('✅File is safe.')}")
+                self.result_box.append(f"{self.translate('✅ File is safe.')}")
 
         self.result_box.append("=" * 50 + "\n")
 
@@ -533,9 +539,10 @@ class MainWindow(QWidget):
 
         if self.processed_files == total_files:  # Все файлы обработаны
             if self.infected_files:
-                self.result_box.append(f"\nGeneral result: Found {len(self.infected_files)} infected file(s).")
+                self.result_box.append(self.translate("General result: Found") + f" {len(self.infected_files)}" + self.translate(" infected file(s)."))
+
             else:
-                self.result_box.append(f"{self.translate('General results: All files are safe.')}")
+                self.result_box.append(f"{self.translate('General result: All files are safe.')}")
             self.result_box.append("=" * 50)
             self.result_box.append(f"{self.translate('Scanning complete')}")
 
@@ -589,15 +596,16 @@ class MainWindow(QWidget):
 
     # Методы для обработки действий
     def quarantine_file(self, file_path):
-        self.result_box.append(f"⭕️ File moved to quarantine: {file_path}")
+        self.result_box.append(f"{self.translate('⭕️ File moved to quarantine')}: {file_path}")
         self.move_to_quarantine(file_path)
 
     def delete_file(self, file_path):
          os.remove(file_path)
-         self.result_box.append(f"🗑 File deleted: {file_path}")
+         self.result_box.append(f"{self.translate('🗑 File deleted')}: {file_path}")
 
     def skip_file(self, file_path):
-        self.result_box.append(f"⏩ File skipped: {file_path}")
+        self.result_box.append(f"{self.translate('Skipped')}: {file_path}")
+        # self.result_box.append(f"{self.translate('🗑 File deleted')}: {file_path}")
         # Ничего не делаем
 
 
