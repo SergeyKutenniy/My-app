@@ -113,7 +113,7 @@ class SettingsDialog(QDialog):
         else:  # Light theme
             self.setStyleSheet("""
                 QDialog {
-                    background-color: #f9f9f9; /* Цвет фона диалогового окна */
+                    background-color: #EEEFF0; /* Цвет фона диалогового окна */
                     border: 1px solid #d3d3d3; /* Граница окна */
                     border-radius: 8px; /* Закругленные углы */
                 }
@@ -491,10 +491,6 @@ class MainWindow(QWidget):
             QLabel {
                 color: #333; /* Цвет текста заголовка */
                 font-size: 14px; /* Размер шрифта текста */
-            }
-            QLineEdit {
-                background: red;
-
             }
             QPushButton {
                 background: #7079f0;
