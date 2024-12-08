@@ -28,9 +28,12 @@ class SettingsDialog(QDialog):
     def __init__(self, current_language, current_theme, parent=None):
         super().__init__(parent)
         self.language = current_language  # Получаем текущий язык
-        self.theme = current_theme
+        self.theme = current_theme  # Получаем текущую тему
         self.setWindowTitle(self.translate("Settings"))  # Переводим заголовок
         self.resize(400, 200)
+
+        # Установка стилей в зависимости от темы
+        self.apply_theme_styles()
 
         # Элементы интерфейса
         self.language_label = QLabel(self.translate("Language:"))
@@ -63,9 +66,97 @@ class SettingsDialog(QDialog):
         layout.addLayout(button_layout)
         self.setLayout(layout)
 
+    def apply_theme_styles(self):
+        """Устанавливает стили для диалогового окна в зависимости от выбранной темы."""
+        if self.theme == "Dark":
+            self.setStyleSheet("""
+                QDialog {
+                    background-color: #333333; /* Цвет фона диалогового окна */
+                    border: 1px solid #333333; /* Граница окна */
+                    border-radius: 8px; /* Закругленные углы */
+                }
+                QLabel {
+                    color: white; /* Цвет текста */
+                    font-size: 14px; /* Размер шрифта */
+                }
+                QComboBox {
+                    background-color: #1E1E1E; /* Цвет фона выпадающего списка */
+                    color: white; /* Цвет текста */
+                    border: 1px solid #d3d3d3; /* Граница */
+                    border-radius: 4px; /* Закругленные углы */
+                    padding: 5px; /* Внутренний отступ */
+                }
+                QComboBox QAbstractItemView {
+                    background-color: #444444; /* Фон выпадающего списка */
+                    color: white; /* Цвет текста */
+                    selection-background-color: #5b65f5; /* Цвет выделения */
+                }
+                QPushButton {
+                    background: #7079f0;
+                    color: white;
+                    min-width: 100px;
+                    font-size: 14px;
+                    font-weight: 500;
+                    border-radius: 0.5em;
+                    border: none;
+                    height: 1.5em;
+                }
+
+                QPushButton:hover {
+                    background: #5b65f5;
+                }
+
+                QPushButton:pressed {
+                    background: #404df7;  
+                }
+            """)
+        else:  # Light theme
+            self.setStyleSheet("""
+                QDialog {
+                    background-color: #f9f9f9; /* Цвет фона диалогового окна */
+                    border: 1px solid #d3d3d3; /* Граница окна */
+                    border-radius: 8px; /* Закругленные углы */
+                }
+                QLabel {
+                    color: #333; /* Цвет текста */
+                    font-size: 14px; /* Размер шрифта */
+                }
+                QComboBox {
+                    background-color: #ffffff; /* Цвет фона выпадающего списка */
+                    color: #000; /* Цвет текста */
+                    border: 1px solid #d3d3d3; /* Граница */
+                    border-radius: 4px; /* Закругленные углы */
+                    padding: 5px; /* Внутренний отступ */
+                }
+                QComboBox QAbstractItemView {
+                    background-color: #ffffff; /* Фон выпадающего списка */
+                    color: black; /* Цвет текста */
+                    selection-background-color: #7079f0; /* Цвет выделения */
+                }
+                QPushButton {
+                    background: #7079f0;
+                    color: white;
+                    min-width: 100px;
+                    font-size: 14px;
+                    font-weight: 500;
+                    border-radius: 0.5em;
+                    border: none;
+                    height: 1.5em;
+                }
+
+                QPushButton:hover {
+                    background: #5b65f5;
+                }
+
+                QPushButton:pressed {
+                    background: #404df7;  
+                }
+            """)
+
     def apply_settings(self):
         """Применяем настройки и закрываем окно."""
         self.language = self.language_combo.currentText()
+        self.theme = self.theme_combo.currentText()
         self.accept()
 
     def get_settings(self):
@@ -413,6 +504,24 @@ class MainWindow(QWidget):
                 border: 1px solid #d3d3d3; /* Граница текстового поля */
                 border-radius: 4px; /* Закругленные углы */
                 padding: 5px; /* Внутренний отступ */
+            }
+            QPushButton {
+                background: #7079f0;
+                color: white;
+                min-width: 100px;
+                font-size: 14px;
+                font-weight: 500;
+                border-radius: 0.5em;
+                border: none;
+                height: 1.5em;
+            }
+
+            QPushButton:hover {
+                background: #5b65f5;
+            }
+
+             QPushButton:pressed {
+                background: #404df7;  
             }
         """)
         
