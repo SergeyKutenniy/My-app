@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import (
-    QWidget, QPushButton, QFileDialog, QApplication, QProgressBar, QTextEdit, QHBoxLayout, QVBoxLayout, QListWidgetItem, QMessageBox, QListWidget, QInputDialog, QDialog, QComboBox, QLabel
+    QWidget, QPushButton, QFileDialog, QApplication, QProgressBar, QTextEdit, QHBoxLayout, QVBoxLayout, QListWidgetItem, QMessageBox, QListWidget, QInputDialog, QDialog, QComboBox, QLabel, QDialogButtonBox
 )
 from PyQt5.QtCore import Qt
 import os
@@ -302,6 +302,7 @@ class MainWindow(QWidget):
             " infected file(s).": " заражений(их) файл(ів)",
             "Scanning complete": "Сканування завершено",
             "Quarantine is empty": "Карантин пустий",
+            "Cancel": "Відміна",
         }
         if self.language == "Українська":
             return translations.get(text, text)
@@ -444,30 +445,93 @@ class MainWindow(QWidget):
             self.scan_files(files)
 
     def scan_url(self):
-        # Показываем диалоговое окно для ввода URL
+    # Показываем диалоговое окно для ввода URL
         dialog = QInputDialog(self)
         dialog.setWindowTitle(f"{self.translate('Scan URL')}")
         dialog.setLabelText(f"{self.translate('Enter URL for scanning:')}")
+        dialog.setCancelButtonText(self.translate("Cancel"))  # Перевод кнопки Cancel
         dialog.resize(400, 200)  # Устанавливаем размер окна (ширина, высота)
-        # Устанавливаем стили для диалогового окна
+
+    # Применение стилей после изменения текста кнопки
         if self.theme == "Dark":
             dialog.setStyleSheet("""
-            QInputDialog {
-                background-color: #333333; /* Цвет фона диалогового окна */
-                border: 1px solid #333333; /* Граница окна */
-                border-radius: 8px; /* Закругленные углы */
-            }
-            QLabel {
-                color: white; /* Цвет текста заголовка */
-                font-size: 14px; /* Размер шрифта текста */
-            }
-            QLineEdit {
-                background-color: #1E1E1E; /* Цвет фона текстового поля */
-                color: white; /* Цвет текста */
-                border: 1px solid #d3d3d3; /* Граница текстового поля */
-                border-radius: 4px; /* Закругленные углы */
-                padding: 5px; /* Внутренний отступ */
-            }
+        QInputDialog {
+            background-color: #333333; /* Цвет фона диалогового окна */
+            border: 1px solid #333333; /* Граница окна */
+            border-radius: 8px; /* Закругленные углы */
+        }
+        QLabel {
+            color: white; /* Цвет текста заголовка */
+            font-size: 14px; /* Размер шрифта текста */
+        }
+        QLineEdit {
+            background-color: #1E1E1E; /* Цвет фона текстового поля */
+            color: white; /* Цвет текста */
+            border: 1px solid #d3d3d3; /* Граница текстового поля */
+            border-radius: 4px; /* Закругленные углы */
+            padding: 5px; /* Внутренний отступ */
+        }
+        QPushButton {
+            background: #7079f0;
+            color: white;
+            min-width: 100px;
+            font-size: 14px;
+            font-weight: 500;
+            border-radius: 0.5em;
+            border: none;
+            height: 1.5em;
+        }
+        QPushButton:hover {
+            background: #5b65f5;
+        }
+        QPushButton:pressed {
+            background: #404df7;  
+        }
+    """)
+        else:
+            dialog.setStyleSheet("""
+        QInputDialog {
+            background-color: #EEEFF0; /* Цвет фона диалогового окна */
+            border: 1px solid #d3d3d3; /* Граница окна */
+            border-radius: 8px; /* Закругленные углы */
+        }
+        QLabel {
+            background-color: #EEEFF0;
+            color: #333; /* Цвет текста заголовка */
+            font-size: 14px; /* Размер шрифта текста */
+        }
+        QLineEdit {
+            background-color: red; /* Цвет фона текстового поля */
+            color: #000; /* Цвет текста */
+            border: 1px solid #d3d3d3; /* Граница текстового поля */
+            border-radius: 4px; /* Закругленные углы */
+            padding: 5px; /* Внутренний отступ */
+        }
+        QPushButton {
+            background: #7079f0;
+            color: white;
+            min-width: 100px;
+            font-size: 14px;
+            font-weight: 500;
+            border-radius: 0.5em;
+            border: none;
+            height: 1.5em;
+        }
+        QPushButton:hover {
+            background: #5b65f5;
+        }
+        QPushButton:pressed {
+            background: #404df7;  
+        }
+    """)
+
+    # Если текст кнопки сбрасывает стили, можно найти кнопку и явно применить стили
+        button_box = dialog.findChild(QDialogButtonBox)
+        if button_box:
+            cancel_button = button_box.button(QDialogButtonBox.Cancel)
+            ok_button = button_box.button(QDialogButtonBox.Ok)
+            if cancel_button:
+                cancel_button.setStyleSheet("""
             QPushButton {
                 background: #7079f0;
                 color: white;
@@ -478,33 +542,15 @@ class MainWindow(QWidget):
                 border: none;
                 height: 1.5em;
             }
-
             QPushButton:hover {
                 background: #5b65f5;
             }
-
             QPushButton:pressed {
                 background: #404df7;  
             }
-        """)
-        else:
-            self.setStyleSheet("""
-            QInputDialog {
-                background-color: #f9f9f9; /* Цвет фона диалогового окна */
-                border: 1px solid #d3d3d3; /* Граница окна */
-                border-radius: 8px; /* Закругленные углы */
-            }
-            QLabel {
-                color: #333; /* Цвет текста заголовка */
-                font-size: 14px; /* Размер шрифта текста */
-            }
-            QLineEdit {
-                background-color: #ffffff; /* Цвет фона текстового поля */
-                color: #000; /* Цвет текста */
-                border: 1px solid #d3d3d3; /* Граница текстового поля */
-                border-radius: 4px; /* Закругленные углы */
-                padding: 5px; /* Внутренний отступ */
-            }
+            """)
+            if ok_button:
+                ok_button.setStyleSheet("""
             QPushButton {
                 background: #7079f0;
                 color: white;
@@ -515,16 +561,13 @@ class MainWindow(QWidget):
                 border: none;
                 height: 1.5em;
             }
-
             QPushButton:hover {
                 background: #5b65f5;
             }
-
-             QPushButton:pressed {
+            QPushButton:pressed {
                 background: #404df7;  
             }
-        """)
-        
+            """)
         if dialog.exec_() == QInputDialog.Accepted:
             url = dialog.textValue()
             if url:
@@ -533,6 +576,7 @@ class MainWindow(QWidget):
                 result = virustotal.scan_url(url)
                 self.display_url_scan_result(url, result)
                 self.progress_bar.setValue(100)
+
 
     def display_url_scan_result(self, url, result):
         # Очищаем поле результатов
