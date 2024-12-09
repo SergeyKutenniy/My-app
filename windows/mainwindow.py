@@ -43,7 +43,6 @@ class SettingsDialog(QDialog):
 
         self.theme_label = QLabel(self.translate("Theme:"))
         self.theme_combo = QComboBox()
-        # self.theme_combo.addItems(["Light", "Dark"])
         self.theme_combo.addItems([self.translate("Light"), self.translate("Dark")])
 
         self.theme_combo.setCurrentText(self.theme)
@@ -183,7 +182,6 @@ class SettingsDialog(QDialog):
             return translations.get(text, text)
         return text
 
-
 class QuarantineWindow(QWidget):
     def __init__(self):
         super().__init__()
@@ -314,6 +312,9 @@ class MainWindow(QWidget):
             "Detailed Results:": "Результат сканування:",
             "❌ URL is flagged as malicious!": "❌ URL позначений як зловмисний",
             "✅ URL appears safe.": "✅ URL виглядає безпечним",
+            "Quarantine": "В карантин",
+            "Delete": "Видалити",
+            "Skip": "Пропустити",
         }
         if self.language == "Українська":
             return translations.get(text, text)
@@ -612,7 +613,6 @@ class MainWindow(QWidget):
         # Разбираем результаты анализа
         analysis_data = result.get("data", {}).get("attributes", {})
         malicious_count = analysis_data.get("stats", {}).get("malicious", 0)
-        # reputation = analysis_data.get("reputation", "Unknown")
         reputation = self.translate(analysis_data.get("reputation", "Unknown"))
         last_analysis_results = analysis_data.get("last_analysis_results", {})
 
@@ -687,7 +687,6 @@ class MainWindow(QWidget):
         self.result_box.clear()
         self.progress_bar.setValue(0)
         self.threads = []
-        total_files = len(files)
         self.processed_files = 0
         self.infected_files = []
 
@@ -833,10 +832,89 @@ class MainWindow(QWidget):
         msg_box.setInformativeText("Select an action:")
     
         # Создаем кнопки
-        quarantine_button = msg_box.addButton("Quarantine", QMessageBox.AcceptRole)
-        delete_button = msg_box.addButton("Delete", QMessageBox.DestructiveRole)
-        skip_button = msg_box.addButton("Skip", QMessageBox.RejectRole)
+        quarantine_button = msg_box.addButton(self.translate("Quarantine"), QMessageBox.AcceptRole)
+        delete_button = msg_box.addButton(self.translate("Delete"), QMessageBox.DestructiveRole)
+        skip_button = msg_box.addButton(self.translate("Skip"), QMessageBox.RejectRole)
 
+        msg_box.setStyleSheet("""
+        QMessageBox {
+            background-color: #EEEFF0; /* Фон окна */
+            border-radius: 8px; /* Закругленные углы */
+            font-size: 14px; /* Размер шрифта */
+        }
+        QLabel {
+            color: #333; /* Цвет текста */
+            font-size: 14px; /* Размер шрифта текста */
+        }
+        QPushButton {
+            background-color: #7079f0; /* Фон кнопок */
+            color: white; /* Цвет текста кнопок */
+            font-size: 14px;
+            font-weight: bold;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 12px;
+        }
+        QPushButton:hover {
+            background-color: #5b65f5;
+        }
+        QPushButton:pressed {
+            background-color: #404df7;
+        }
+    """)
+        # Стили для кнопок
+        delete_button.setStyleSheet("""
+        QPushButton {
+            background-color: #d9534f; /* Красный цвет для Delete */
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 12px;
+        }
+        QPushButton:hover {
+            background-color: #c9302c;
+        }
+        QPushButton:pressed {
+            background-color: #ac2925;
+        }
+    """)
+        skip_button.setStyleSheet("""
+        QPushButton {
+            background-color: #7079f0; /* Красный цвет для Delete */
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 12px;
+        }
+        QPushButton:hover {
+            background: #5b65f5;
+        }
+       QPushButton:pressed {
+            background: #404df7;  
+                }
+    """)
+        quarantine_button.setStyleSheet("""
+        QPushButton {
+            background-color: #f0ad4e; /* Желтый цвет для Quarantine */
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 12px;
+        }
+        QPushButton:hover {
+            background-color: #ec971f;
+        }
+        QPushButton:pressed {
+            background-color: #d58512;
+        }
+    """)
+    
         msg_box.exec_()  # Показываем диалог
 
         # Проверяем, какая кнопка была нажата
@@ -870,7 +948,6 @@ class MainWindow(QWidget):
 
     def skip_file(self, file_path):
         self.result_box.append(f"{self.translate('Skipped')}: {file_path}")
-        # self.result_box.append(f"{self.translate('🗑 File deleted')}: {file_path}")
         # Ничего не делаем
 
 
