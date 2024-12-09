@@ -43,7 +43,9 @@ class SettingsDialog(QDialog):
 
         self.theme_label = QLabel(self.translate("Theme:"))
         self.theme_combo = QComboBox()
-        self.theme_combo.addItems(["Light", "Dark"])
+        # self.theme_combo.addItems(["Light", "Dark"])
+        self.theme_combo.addItems([self.translate("Light"), self.translate("Dark")])
+
         self.theme_combo.setCurrentText(self.theme)
 
         # Компоновка
@@ -54,7 +56,7 @@ class SettingsDialog(QDialog):
         layout.addWidget(self.theme_combo)
 
         # Кнопки
-        self.ok_button = QPushButton(self.translate("OK"))
+        self.ok_button = QPushButton(self.translate("Ok"))
         self.cancel_button = QPushButton(self.translate("Cancel"))
         self.ok_button.clicked.connect(self.apply_settings)
         self.cancel_button.clicked.connect(self.reject)
@@ -68,7 +70,7 @@ class SettingsDialog(QDialog):
 
     def apply_theme_styles(self):
         """Устанавливает стили для диалогового окна в зависимости от выбранной темы."""
-        if self.theme == "Dark":
+        if self.theme in ["Dark", "Темна"]:
             self.setStyleSheet("""
                 QDialog {
                     background-color: #333333; /* Цвет фона диалогового окна */
@@ -172,8 +174,10 @@ class SettingsDialog(QDialog):
             "Settings": "Налаштування",
             "Language:": "Мова:",
             "Theme:": "Тема:",
-            "OK": "ОК",
+            "Ok": "Оk",
             "Cancel": "Відміна",
+            "Light": "Світла",
+            "Dark": "Темна",
         }
         if self.language == "Українська":
             return translations.get(text, text)
@@ -296,13 +300,20 @@ class MainWindow(QWidget):
             "An error occurred. Skipping file.": "Сталася помилка. Пропускаємо файл.",
             "❌ Malicious file detected": "❌ Виявлено шкідливий файл",
             "❗️ Number of security providers": "❗️ Кількість антивірусів, які виявили шкідливий файл:",
-            "✅ File is safe.": "✅ Файл безпечний",
+            "✅ File is safe.": "✅ Файл безпечний.",
             "General result: All files are safe.": "Загальний результат: Всі файли безпечні",
             "General result: Found": "Загальний результат: Знайдено",
-            " infected file(s).": " заражений(их) файл(ів)",
+            " infected file(s).": " заражений(их) файл(ів).",
             "Scanning complete": "Сканування завершено",
             "Quarantine is empty": "Карантин пустий",
             "Cancel": "Відміна",
+            "Malicious Reports": "Зловмисні звіти",
+            "Reputation": "Репутація",
+            "reputation": "Репутація",
+            "Unknown": "Невідома",
+            "Detailed Results:": "Результат сканування:",
+            "❌ URL is flagged as malicious!": "❌ URL позначений як зловмисний",
+            "✅ URL appears safe.": "✅ URL виглядає безпечним",
         }
         if self.language == "Українська":
             return translations.get(text, text)
@@ -349,7 +360,7 @@ class MainWindow(QWidget):
     def create_quarantine_table(self):  # Добавлен параметр theme
     
         # Установка стилей в зависимости от темы
-        if self.theme == "Dark":
+        if self.theme in ["Dark", "Темна"]:
             self.list_widget.setStyleSheet('''
                 QListWidget { background: #222; border: 1px solid #555; font-size: 14px; color: white; }
                 QListWidget::item { padding: 5px; }
@@ -396,7 +407,7 @@ class MainWindow(QWidget):
 
 
     def get_theme_stylesheet(self):
-        if self.theme == "Dark":
+        if self.theme in ["Dark", "Темна"]:
             # Устанавливаем темный стиль для result_box
             self.list_widget.setStyleSheet('''
                 QListWidget { background: #222; border: 1px solid #555; font-size: 14px; color: white; }
@@ -451,9 +462,11 @@ class MainWindow(QWidget):
         dialog.setLabelText(f"{self.translate('Enter URL for scanning:')}")
         dialog.setCancelButtonText(self.translate("Cancel"))  # Перевод кнопки Cancel
         dialog.resize(400, 200)  # Устанавливаем размер окна (ширина, высота)
+        self.result_box.show()
+        self.quarantine_table.hide()
 
     # Применение стилей
-        if self.theme == "Dark":
+        if self.theme in ["Dark", "Темна"]:
             dialog.setStyleSheet("""
             QInputDialog {
                 background-color: #333333; /* Цвет фона диалогового окна */
@@ -511,7 +524,7 @@ class MainWindow(QWidget):
         """)
         line_edit = dialog.findChild(QLineEdit)
         if line_edit:
-            if self.theme == "Dark":
+            if self.theme in ["Dark", "Темна"]:
                 line_edit.setStyleSheet("""
                 QLineEdit {
                     background-color: #1E1E1E; /* Цвет фона текстового поля */
@@ -599,14 +612,14 @@ class MainWindow(QWidget):
         # Разбираем результаты анализа
         analysis_data = result.get("data", {}).get("attributes", {})
         malicious_count = analysis_data.get("stats", {}).get("malicious", 0)
-        total_votes = analysis_data.get("stats", {}).get("total", 0)
-        reputation = analysis_data.get("reputation", "Unknown")
+        # reputation = analysis_data.get("reputation", "Unknown")
+        reputation = self.translate(analysis_data.get("reputation", "Unknown"))
         last_analysis_results = analysis_data.get("last_analysis_results", {})
 
         # Отображаем основные данные
-        self.result_box.append(f"Malicious Reports: {malicious_count}")
-        self.result_box.append(f"Reputation: {reputation}")
-        self.result_box.append("\nDetailed Results:")
+        self.result_box.append(f"{self.translate('Malicious Reports')}: {malicious_count}")
+        self.result_box.append(f"{self.translate('Reputation')}: {reputation}")
+        self.result_box.append(self.translate("Detailed Results:"))
 
         # Подробный анализ от поставщиков
         for engine, details in last_analysis_results.items():
@@ -615,9 +628,9 @@ class MainWindow(QWidget):
             self.result_box.append(f"{engine}: {category} ({result})")
 
         if malicious_count > 0:
-            self.result_box.append("❌ URL is flagged as malicious!")
+            self.result_box.append(self.translate("❌ URL is flagged as malicious!"))
         else:
-            self.result_box.append("✅ URL appears safe.")
+            self.result_box.append(self.translate("✅ URL appears safe."))
 
         self.result_box.append("=" * 50)
         self.result_box.append(f"{self.translate('Scanning complete')}")
