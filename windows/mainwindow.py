@@ -1043,6 +1043,29 @@ class MainWindow(QWidget):
         msg.setWindowTitle(self.translate("No File Selected"))
         msg.setText(self.translate("Please select a file to delete or restore."))  
         msg.setStandardButtons(QMessageBox.Ok)
+
+        ok_button = msg.button(QMessageBox.Ok)
+        if ok_button:
+            ok_button.setStyleSheet("""
+            QPushButton {
+                background-color: #7079f0;
+                width: 100px;
+                color: white;
+                font-size: 14px;
+                font-weight: bold;
+                border-radius: 8px;
+                padding: 6px 12px;
+                border: none;
+            }
+            QPushButton:hover {
+                background-color: #5b65f5;
+            }
+            QPushButton:pressed {
+                background-color: #404df7;
+            }
+        """)
+
+
         msg.exec_()
 
     # Add helper method to show "File not found" message
