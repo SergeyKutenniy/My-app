@@ -68,7 +68,7 @@ class SettingsDialog(QDialog):
         self.setLayout(layout)
 
     def apply_theme_styles(self):
-        """Устанавливает стили для диалогового окна в зависимости от выбранной темы."""
+        # Устанавливает стили для диалогового окна в зависимости от выбранной темы.
         if self.theme in ["Dark", "Темна"]:
             self.setStyleSheet("""
                 QDialog {
@@ -155,20 +155,20 @@ class SettingsDialog(QDialog):
             """)
 
     def apply_settings(self):
-        """Применяем настройки и закрываем окно."""
+        # Применяем настройки и закрываем окно.
         self.language = self.language_combo.currentText()
         self.theme = self.theme_combo.currentText()
         self.accept()
 
     def get_settings(self):
-        """Возвращает выбранные настройки."""
+        # Возвращает выбранные настройки.
         return {
             "language": self.language_combo.currentText(),
             "theme": self.theme_combo.currentText()
         }
 
     def translate(self, text):
-        """Функция перевода текста."""
+        # Функция перевода текста.
         translations = {
             "Settings": "Налаштування",
             "Language:": "Мова:",
@@ -192,7 +192,7 @@ class QuarantineWindow(QWidget):
         self.setLayout(layout)
 
     def update_theme(self, theme):
-        """Обновление темы таблицы"""
+        # Обновление темы таблицы
         self.theme = theme
         self.list_widget.setParent(None)  # Удаляем текущий виджет
         self.list_widget = self.create_quarantine_table(self.theme)  # Пересоздаем таблицу
@@ -959,6 +959,7 @@ class MainWindow(QWidget):
         file_info = {
             "file_name": os.path.basename(file_path),
             "quarantine_path": quarantine_path,
+            "original_path": file_path,  # Сохраняем оригинальный путь
             "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "status": "quarantined"
         }
@@ -993,10 +994,11 @@ class MainWindow(QWidget):
         if selected_item:  # Check if an item is selected
             file_entry = selected_item.data(Qt.UserRole)
             file_path = file_entry["quarantine_path"]
-            original_path = os.path.join(os.getcwd(), file_entry["file_name"])
+            original_path = file_entry.get("original_path")  # Берём оригинальный путь из логов
             if os.path.exists(file_path):
+                os.makedirs(os.path.dirname(original_path), exist_ok=True)  # Создаём папку, если её нет
                 shutil.move(file_path, original_path)
-                self.result_box.append(f"File restored from quarantine: {file_path}")
+                self.result_box.append(f"File restored to: {original_path}")
                 self.remove_file_from_log(file_entry)
                 self.load_quarantine()
             else:
