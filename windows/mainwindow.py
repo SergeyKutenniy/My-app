@@ -315,6 +315,27 @@ class MainWindow(QWidget):
             "Quarantine": "В карантин",
             "Delete": "Видалити",
             "Skip": "Пропустити",
+            "Retry": "Повторити",
+            "Select an action:": "Оберіть дію:",
+            "Threat Detected": "Виявлено загрозу",
+            "The file": "Файл",
+            "is infected.": "є зловмисним",
+            "Too Many Requests": "Забагато запитів", 
+            "Would you like to try scanning it again?": "Бажаєте спробувати відсканувати його ще раз?",
+            "could not be scanned due to too many requests.": "не вдалося відсканувати через збільшену кількість запитів.",
+            "Failed to scan": "Не вдалося просканувати",
+            "after": "після",
+            "attempts. Skipping file.": "спроб. Пропускаємо файл.",
+            "Scan Error:": "Помилка сканування:",
+            "error": "помилка",
+            "Total checks:": "Усього перевірок:",
+            "Unknown action for": "Невідома дія для",
+            "File deleted": "Файл видалено", 
+            "File restored to": "Файл відновлено до", 
+            "No File Selected": "Файл не вибрано",
+            "Please select a file to delete or restore.": "Будь ласка, виберіть файл для видалення або відновлення.",
+            "File Not Found": "Файл не знайдено",
+            "was not found.": "не було знайдено.",
         }
         if self.language == "Українська":
             return translations.get(text, text)
@@ -736,13 +757,13 @@ class MainWindow(QWidget):
     def show_retry_dialog(self, file_path):
         msg_box = QMessageBox(self)
         msg_box.setIcon(QMessageBox.Warning)
-        msg_box.setWindowTitle("Too Many Requests")
-        msg_box.setText(f"The file {file_path} could not be scanned due to too many requests.")
-        msg_box.setInformativeText("Would you like to try scanning it again?")
+        msg_box.setWindowTitle(self.translate("Too Many Requests"))
+        msg_box.setText(f"{self.translate('The file')} {file_path} {self.translate('could not be scanned due to too many requests.')}")
+        msg_box.setInformativeText(self.translate("Would you like to try scanning it again?"))
     
         # Добавляем кнопки
-        retry_button = msg_box.addButton("Retry", QMessageBox.AcceptRole)
-        skip_button = msg_box.addButton("Skip", QMessageBox.RejectRole)
+        retry_button = msg_box.addButton(self.translate("Retry"), QMessageBox.AcceptRole)
+        skip_button = msg_box.addButton(self.translate("Skip"), QMessageBox.RejectRole)
 
         # Запускаем диалог
         msg_box.exec_()
@@ -756,7 +777,7 @@ class MainWindow(QWidget):
 
 
     def retry_scan(self, file_path, retries=3):
-        """Повторяет сканирование файла до заданного количества попыток."""
+        # """Повторяет сканирование файла до заданного количества попыток."""
         for attempt in range(retries):
             self.result_box.append(f"Retrying scan for {file_path}... (Attempt {attempt + 1}/{retries})")
             result = virustotal.upload_file(file_path)
@@ -767,17 +788,16 @@ class MainWindow(QWidget):
                 return
 
         # Если после всех попыток ошибка сохраняется
-        self.result_box.append(f"❌ Failed to scan {file_path} after {retries} attempts. Skipping file.")
-
+        self.result_box.append(f"❌ {self.translate('Failed to scan')} {file_path} {self.translate('after')} {retries} {self.translate('attempts. Skipping file.')}")
 
     def update_scan_result(self, file_path, scan_result):
             # Выводим результат в текстовое поле
-            self.result_box.append(f"Scan Results for file: {file_path}")
+            self.result_box.append(f"{self.translate('Scan Results for file')}: {file_path}")
             self.result_box.append("=" * 50)
             if "error" in scan_result:
-                self.result_box.append(f"Scan Error: {scan_result['error']}")
+                self.result_box.append(f"{self.translate('Scan Error:')} {scan_result['error']}")
             else:
-                self.result_box.append(f"Total checks: {sum(scan_result.get(f'{category}_count', 0) for category in ['malicious', 'harmless', 'suspicious', 'undetected'])}")
+                self.result_box.append(f"{self.translate('Total checks:')} {sum(scan_result.get(f'{category}_count', 0) for category in ['malicious', 'harmless', 'suspicious', 'undetected'])}")
                 for category in ['malicious', 'harmless', 'suspicious', 'undetected']:
                     self.result_box.append(f"{category.capitalize()}: {scan_result.get(f'{category}_count', 0)}")
         
@@ -812,13 +832,14 @@ class MainWindow(QWidget):
 
 
     def display_scan_result(self, vt_result, file_path):
-        self.result_box.append(f"Scan Results for file: {file_path}")
+        self.result_box.append(f"{self.translate('Scan Results for file')}: {file_path}")
         self.result_box.append("=" * 50)
         if "error" in vt_result:
-            self.result_box.append(f"Scan Error: {vt_result['error']}")
+            self.result_box.append(f"{self.translate('Scan Error:')} {vt_result['error']}")
+
             return
 
-        self.result_box.append(f"Total checks: {sum(vt_result.get(f'{category}_count', 0) for category in ['malicious', 'harmless', 'suspicious', 'undetected'])}")
+        self.result_box.append(f"{self.translate('Total checks:')} {sum(vt_result.get(f'{category}_count', 0) for category in ['malicious', 'harmless', 'suspicious', 'undetected'])}")
         for category in ['malicious', 'harmless', 'suspicious', 'undetected']:
             self.result_box.append(f"{category.capitalize()}: {vt_result.get(f'{category}_count', 0)}")
 
@@ -827,42 +848,15 @@ class MainWindow(QWidget):
     def show_infected_file_dialog(self, file_path):
         msg_box = QMessageBox(self)
         msg_box.setIcon(QMessageBox.Warning)
-        msg_box.setWindowTitle("Threat Detected")
-        msg_box.setText(f"The file {file_path} is infected.")
-        msg_box.setInformativeText("Select an action:")
+        msg_box.setWindowTitle(self.translate("Threat Detected"))
+        msg_box.setText(f"{self.translate('The file')} {file_path} {self.translate('is infected.')}")
+        msg_box.setInformativeText(self.translate("Select an action:"))
     
         # Создаем кнопки
         quarantine_button = msg_box.addButton(self.translate("Quarantine"), QMessageBox.AcceptRole)
         delete_button = msg_box.addButton(self.translate("Delete"), QMessageBox.DestructiveRole)
         skip_button = msg_box.addButton(self.translate("Skip"), QMessageBox.RejectRole)
 
-        msg_box.setStyleSheet("""
-        QMessageBox {
-            background-color: #EEEFF0; /* Фон окна */
-            border-radius: 8px; /* Закругленные углы */
-            font-size: 14px; /* Размер шрифта */
-        }
-        QLabel {
-            color: #333; /* Цвет текста */
-            font-size: 14px; /* Размер шрифта текста */
-        }
-        QPushButton {
-            background-color: #7079f0; /* Фон кнопок */
-            color: white; /* Цвет текста кнопок */
-            font-size: 14px;
-            font-weight: bold;
-            border: none;
-            border-radius: 6px;
-            padding: 6px 12px;
-        }
-        QPushButton:hover {
-            background-color: #5b65f5;
-        }
-        QPushButton:pressed {
-            background-color: #404df7;
-        }
-    """)
-        # Стили для кнопок
         delete_button.setStyleSheet("""
         QPushButton {
             background-color: #d9534f; /* Красный цвет для Delete */
@@ -914,6 +908,42 @@ class MainWindow(QWidget):
             background-color: #d58512;
         }
     """)
+        msg_box.setStyleSheet("""
+        QMessageBox {
+            background-color: #EEEFF0; /* Фон окна */
+            border-radius: 8px; /* Закругленные углы */
+            font-size: 14px; /* Размер шрифта */
+        }
+        QLabel {
+            color: #333; /* Цвет текста */
+            font-size: 14px; /* Размер шрифта текста */
+        }
+        QPushButton {
+            background-color: #7079f0; /* Фон кнопок */
+            color: white; /* Цвет текста кнопок */
+            font-size: 14px;
+            font-weight: bold;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 12px;
+        }
+        QPushButton:hover {
+            background-color: #5b65f5;
+        }
+        QPushButton:pressed {
+            background-color: #404df7;
+        }
+    """)
+
+        if self.theme in ["Dark", "Темна"]:
+            msg_box.setStyleSheet("""
+        QMessageBox {
+            background-color: #333333; /* Фон окна */
+        }
+        QLabel {
+            color: white; /* Цвет текста */
+        }
+        """)
     
         msg_box.exec_()  # Показываем диалог
 
@@ -935,7 +965,7 @@ class MainWindow(QWidget):
         elif action == "skip":
             self.skip_file(file_path)
         else:
-            self.result_box.append(f"Unknown action for {file_path}")
+            self.result_box.append(f"{self.translate('Unknown action for')} {file_path}")
 
     # Методы для обработки действий
     def quarantine_file(self, file_path):
@@ -981,7 +1011,7 @@ class MainWindow(QWidget):
             file_path = file_entry["quarantine_path"]
             if os.path.exists(file_path):
                 os.remove(file_path)
-                self.result_box.append(f"File deleted: {file_path}")
+                self.result_box.append(f"{self.translate('File deleted')}: {file_path}")
                 self.remove_file_from_log(file_entry)
                 self.load_quarantine()
             else:
@@ -998,7 +1028,7 @@ class MainWindow(QWidget):
             if os.path.exists(file_path):
                 os.makedirs(os.path.dirname(original_path), exist_ok=True)  # Создаём папку, если её нет
                 shutil.move(file_path, original_path)
-                self.result_box.append(f"File restored to: {original_path}")
+                self.result_box.append(f"{self.translate('File restored to')}: {original_path}")
                 self.remove_file_from_log(file_entry)
                 self.load_quarantine()
             else:
@@ -1010,8 +1040,8 @@ class MainWindow(QWidget):
     def show_no_file_selected_message(self):
         msg = QMessageBox(self)
         msg.setIcon(QMessageBox.Warning)
-        msg.setWindowTitle("No File Selected")
-        msg.setText("Please select a file to delete or restore.")
+        msg.setWindowTitle(self.translate("No File Selected"))
+        msg.setText(self.translate("Please select a file to delete or restore."))  
         msg.setStandardButtons(QMessageBox.Ok)
         msg.exec_()
 
@@ -1019,8 +1049,8 @@ class MainWindow(QWidget):
     def show_file_not_found_message(self, file_path):
         msg = QMessageBox(self)
         msg.setIcon(QMessageBox.Warning)
-        msg.setWindowTitle("File Not Found")
-        msg.setText(f"The file '{file_path}' was not found.")
+        msg.setWindowTitle(self.translate("File Not Found"))
+        msg.setText(f"{self.translate('The file')} '{file_path}' {self.translate('was not found.')}")
         msg.setStandardButtons(QMessageBox.Ok)
         msg.exec_()
 
